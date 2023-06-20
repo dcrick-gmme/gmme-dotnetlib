@@ -1,0 +1,9 @@
+# git ignore file
+.vscode/hold
+backup/
+bin/
+obj/
+logs/
+gmme-dotnetlib.csproj.hold
+gmme-dotnetlib.csproj.hold2
+obj-hold/

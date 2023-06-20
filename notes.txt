@@ -1,0 +1,12 @@
+-- dotnet commands
+    -- create new console app
+        dotnet new console --name appname --framework net7.0
+
+    -- create new classlib
+        dotnet new classlib --name classlibname --framework net7.0
+
+
+    -- build
+        dotnet build F:\crick3\dev\dotnet\gmme-dotnetlib\test-gmme-dotnetlib\test-gmme-dotnetlib.csproj /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary
+
+                "${workspaceFolder}/test-gmme-dotnetlib/test-gmme-dotnetlib.csproj",

@@ -1,0 +1,1069 @@
+.namespace GMMLib.Utils;
+
+0//----------------------------------------------------------------------------------------
+//	GMMLib.Net.35 for .NET 3.5
+//	Copyright (c) 2006, GMM Enterprises, LLC.  Licensed under the GMM Software License 
+//	All rights reserved 
+//----------------------------------------------------------------------------------------
+//
+//	File:	Logger.cs
+//	Author:	David Crickenberger
+//
+//	Desc:	Logging module for batch related programs.
+//
+//--------------------------------------------------------------------------------
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Net;
+using System.Text;
+using System.Threading;
+
+//namespace GMMLib
+//{
+	[FlagsAttribute]
+	public enum LoggerFields : short
+	{
+		AppName = 0x01,
+		FileName = 0x02,
+		HostName = 0x04,
+		Lineno = 0x08,
+		MethodName = 0x10,
+		MethodDeclareName = 0x20,
+		MethodDeclareNamespace = 0x40,
+		MethodDeclareDllName = 0x80,
+
+		Default = 0x0F,
+
+		All = 0xFF,
+	}
+	public enum LoggerFieldsItemType
+	{
+		Console = 1,
+		TextWriter = 2
+	}
+
+
+	/// <summary>
+	/// Summary description for Logger.
+	/// </summary>
+	public class Logger
+	{
+		//--------------------------------------------------------------------
+		//-- private variables
+		//--------------------------------------------------------------------
+		private string m_appName;
+		private string m_hostName;
+
+		private bool m_append;
+		private bool m_shared;
+
+		private LoggerFieldsData m_fields;
+		private Dictionary<LoggerFieldsItemType, LoggerFields> m_fieldsItems;
+
+		private string m_logFile;
+		private string m_logFull;
+		private string m_logPath;
+
+		private string m_dtfmt = "%Y%m%d%H%M%S";
+
+		private bool m_stdout = true;
+
+		private FileStream m_logFileStream;
+
+		private string m_name;
+
+		private LoggerConsoleListener m_listenerConsole;
+		private LoggerTextWriterListener m_listenerTextWriter;
+
+		private string m_outfmt = "%m/%d/%Y %H:%M:%S.%t";
+		private string m_outfmtTranslated;
+
+		private int m_randomNameLength = 15;
+
+		private static char[] m_crlfDelim = { '\r', '\n' };
+
+
+		//------------------------------------------------------------------------
+		//-- ctor/dtor
+		//------------------------------------------------------------------------
+		#region ctor/dtor
+		public Logger()
+		{
+			xInit(xCreateLoggerFieldsItem(LoggerFields.Default));
+		}
+		public Logger(CMDLine a_cmdline, LoggerFields a_fields = LoggerFields.Default)
+			: this(a_cmdline, xCreateLoggerFieldsItem(a_fields))
+		{
+		}
+		public Logger(CMDLine a_cmdline, LoggerFieldsItem[] a_fields)
+		{
+			//--------------------------------------------------------------------
+			//-- pull command line options
+			//--------------------------------------------------------------------
+			m_logPath = a_cmdline.GetOptValue("-logpath");
+			m_logFile = a_cmdline.GetOptValue("-logfile");
+
+			if (a_cmdline.IsOpt("-logappend"))
+				m_append = a_cmdline.GetYesNoOpt("-logappend", true);
+			if (a_cmdline.IsOpt("-logshared"))
+			{
+				m_shared = a_cmdline.GetYesNoOpt("-logshared", true);
+				if (m_shared)
+					m_append = true;
+			}
+
+			m_stdout = a_cmdline.GetYesNoOpt("-logstdout", true);
+			m_dtfmt = a_cmdline.GetOptValueDef("-logdtfmt", m_dtfmt);
+
+			m_randomNameLength = Convert.ToInt32(a_cmdline.GetOptValueDef("-lograndomnamelength", "15"));
+
+			xInit(a_fields);
+		}
+		public Logger(string a_path, string a_file, bool a_append = false, bool a_shared = false, LoggerFields a_fields = LoggerFields.Default)
+			: this(a_path, a_file, a_append, a_shared, xCreateLoggerFieldsItem(a_fields))
+		{
+		}
+		public Logger(string a_path, string a_file, bool a_append, bool a_shared, LoggerFieldsItem[] a_fields)
+		{
+			m_logPath = a_path;
+			m_logFile = a_file;
+			m_append = a_append;
+			m_shared = a_shared;
+
+			xInit(a_fields);
+		}
+
+		~Logger()
+		{
+			Close();
+		}
+
+		private void xInit(LoggerFieldsItem[] a_fields)
+		{
+			//--------------------------------------------------------------------
+			//-- determine some values from the system, saving the current
+			//-- directory and restoring after getting the current process name
+			//--------------------------------------------------------------------
+			m_appName = AppDomain.CurrentDomain.FriendlyName;
+			m_hostName = Dns.GetHostName();
+
+			if (m_logFile == null || m_logFile.Length == 0)
+				m_logFile = m_appName;
+
+			m_dtfmt = xTranslateDateTimeFmt(m_dtfmt);
+			m_outfmtTranslated = xTranslateDateTimeFmt(m_outfmt);
+
+			//--------------------------------------------------------------------
+			//-- initialize fields data
+			//--------------------------------------------------------------------
+			m_fieldsItems = new Dictionary<LoggerFieldsItemType, LoggerFields>();
+			LoggerFieldsItem[] l_fields = (a_fields != null) ? a_fields : xCreateLoggerFieldsItem(LoggerFields.Default);
+			foreach (LoggerFieldsItem l_item in l_fields)
+				m_fieldsItems.Add(l_item.Type, l_item.Fields);
+		}
+		#endregion
+
+		//--------------------------------------------------------------------
+		//-- properties
+		//--------------------------------------------------------------------
+		public string Name { get { return m_name; } }
+
+		public bool Append
+		{
+			get { return m_append; }
+			set { m_append = value; }
+		}
+		public string FileFull { get { return m_logFull; } }
+		public string FileName { set { m_logFile = value; } }
+		public bool IsOpen { get { return m_logFileStream != null; } }
+
+		public string LogPath
+		{
+			get { return m_logPath; }
+			set { m_logPath = value.TrimEnd('\\'); }
+		}
+
+		public string OutDateFmt
+		{
+			get { return m_outfmt; }
+			set
+			{
+				m_outfmt = value;
+				m_outfmtTranslated = xTranslateDateTimeFmt(m_outfmt);
+			}
+		}
+		public bool Shared
+		{
+			get { return m_shared; }
+			set { m_shared = value; }
+		}
+		public bool StdOut
+		{
+			get { return m_stdout; }
+			set { m_stdout = value; }
+		}
+		public LoggerFields GetLoggerFields(LoggerFieldsItemType a_type)
+		{
+			return m_fieldsItems[a_type];
+		}
+
+		public LoggerFieldsData Data { get { return m_fields; } }
+
+
+		//------------------------------------------------------------------------
+		//-- Open/Close
+		//------------------------------------------------------------------------
+		#region Open/Close
+		public bool Open()
+		{
+			//--------------------------------------------------------------------
+			//-- initialize date/time of when open is starting
+			//--------------------------------------------------------------------
+			string l_dt = xDateTimeToString(m_dtfmt);
+
+			//--------------------------------------------------------------------
+			//-- determine logger name used by listeners to make sure data is
+			//-- written to the correct listener and initialize fields object
+			//--------------------------------------------------------------------
+			//m_name = "GMMLib.Logger_"; 
+			//	+ xGenerateName(new Random(), m_randomNameLength);
+			m_fields = new LoggerFieldsData(m_name, m_appName, m_hostName);
+
+
+			//--------------------------------------------------------------------
+			//-- open up listeners
+			//--------------------------------------------------------------------
+			int i1 = Thread.CurrentThread.ManagedThreadId;
+			int i2 = Thread.CurrentThread.GetHashCode();
+			int i3 = AppDomain.CurrentDomain.Id;
+			//AppDomain.CurrentDomain.DomainManager.
+            
+			//Trace.UseGlobalLock = false;
+			if (!xOpenConsole(l_dt))
+				return false;
+			if (!xOpenTextWriter(l_dt))
+				return false;
+			Trace.AutoFlush = true;
+
+			//--------------------------------------------------------------------
+			//-- determine were we were called from and write to log file
+			//--------------------------------------------------------------------
+			Info("Logger Opened from: " + xGetCaller().ToString().TrimEnd(m_crlfDelim));
+
+			return true;
+		}
+		private bool xOpenConsole(string a_dtOpen)
+		{
+			if (!m_stdout)
+				return true;
+			try
+			{
+				m_listenerConsole = new LoggerConsoleListener(this, new LoggerFieldsUse(m_fieldsItems[LoggerFieldsItemType.Console]));
+				Trace.Listeners.Add(m_listenerConsole);
+			}
+			catch (Exception e)
+			{
+				System.Console.Error.WriteLine("ERROR: =============================================");
+				System.Console.Error.WriteLine("ERROR: Console could not be opened:");
+				System.Console.Error.WriteLine(e);
+				System.Console.Error.WriteLine("ERROR: =============================================");
+
+				return false;
+			}
+
+			return true;
+		}
+		private bool xOpenTextWriter(string a_dtOpen)
+		{
+			//--------------------------------------------------------------------
+			//-- determine if logfile exists
+			//--------------------------------------------------------------------
+			m_logFull = "";
+			if (m_logPath != null && m_logPath.Length > 0 && m_logPath != "." && m_logPath != "..")
+			{
+				FileInfo l_pi = new FileInfo(m_logPath);
+				m_logFull = l_pi.FullName;
+				if (!l_pi.Exists)
+				{
+					try
+					{
+						Directory.CreateDirectory(m_logPath);
+					}
+					catch (Exception e)
+					{
+						System.Console.Error.WriteLine("ERROR: =============================================");
+						System.Console.Error.WriteLine("ERROR: Logpath cannot be created:");
+						System.Console.Error.WriteLine("ERROR:           logpath = " + m_logPath);
+						System.Console.Error.WriteLine("ERROR:           logfull = " + m_logFull);
+						System.Console.Error.WriteLine(e);
+						System.Console.Error.WriteLine("ERROR: =============================================");
+
+						return false;
+					}
+				}
+				m_logFull += "\\";
+			}
+			m_logFull += m_logFile;
+
+			//--------------------------------------------------------------------
+			//-- initialize the filename
+			//--------------------------------------------------------------------
+			FileInfo l_fi = new FileInfo(m_logFull);
+			string l_extension = l_fi.Extension;
+			m_logFull = l_fi.FullName;
+			if (m_logFull.EndsWith(".vshost.exe"))
+			{
+				m_logFull = m_logFull.Substring(0, m_logFull.Length - 11);
+				l_extension = "";
+			}
+			if (l_extension == "")
+				m_logFull += "_" + a_dtOpen + ".log";
+
+			//--------------------------------------------------------------------
+			//-- open file
+			//--------------------------------------------------------------------
+			try
+			{
+				if (m_shared)
+					m_logFileStream = new FileStream(m_logFull, FileMode.Append, FileAccess.Write, FileShare.Write);
+				else if (m_append)
+					m_logFileStream = new FileStream(m_logFull, FileMode.Append, FileAccess.Write);
+				else
+					m_logFileStream = new FileStream(m_logFull, FileMode.Create, FileAccess.Write);
+
+				//m_listenerTextWriter = new LoggerTextWriterListener(this, new LoggerFieldsUse(m_fieldsItems[LoggerFieldsItemType.TextWriter]), m_logFileStream);
+				//m_listenerTextWriter = new LoggerTextWriterListener(this, m_logFileStream);
+				//Trace.Listeners.Add(m_listenerTextWriter);
+//				TextWriter tw = new TextWriter(m_logFileStream);
+			}
+			catch (Exception e)
+			{
+				System.Console.Error.WriteLine("ERROR: =============================================");
+				System.Console.Error.WriteLine("ERROR: Logfile cannot be opened: " + m_logFull);
+				System.Console.Error.WriteLine(e);
+				System.Console.Error.WriteLine("ERROR: =============================================");
+
+				return false;
+			}
+
+			return true;
+		}
+
+		//------------------------------------------------------------------------
+		//------------------------------------------------------------------------
+		public void Close()
+		{
+			//if (m_listenerConsole != null)
+			//{
+			//    Trace.Listeners.Remove(m_listenerConsole);
+			//    //m_listenerConsole.Close();
+			//    m_listenerConsole = null;
+			//}
+
+			//if (m_listenerTextWriter != null)
+			//{
+			//    Trace.Listeners.Remove(m_listenerTextWriter);
+			//    //m_listenerTextWriter.Close();
+			//    m_listenerTextWriter = null;
+
+				if (m_logFileStream != null)
+				{
+					try
+					{
+						m_logFileStream.Close();
+					}
+					catch (Exception)
+					{
+					}
+					m_logFileStream = null;
+				}
+			//}
+		}
+		#endregion
+
+
+		//------------------------------------------------------------------------
+		//-- log routines
+		//------------------------------------------------------------------------
+		#region log-routines
+		public void Debug(string a_msg = "")
+		{
+			xLog("debug", a_msg);
+		}
+		public void Fatal(string a_msg = "")
+		{
+			xLog("fatal", a_msg);
+		}
+		public void Info(string a_msg = "")
+		{
+			xLog("info", a_msg);
+		}
+		public void Warn(string a_msg = "")
+		{
+			xLog("warn", a_msg);
+		}
+		public void Warning(string a_msg = "")
+		{
+			xLog("warn", a_msg);
+		}
+		public void Sql(string a_msg = "")
+		{
+			xLog("sql", a_msg);
+		}
+
+		private void xLog(string a_type, string a_msg)
+		{
+			//--------------------------------------------------------------------
+			//-- set fields and call trace
+			//--------------------------------------------------------------------
+			m_fields.Set(xDateTimeToString(m_outfmtTranslated), a_type, xGetCaller(2), a_msg);
+			string l_message = m_fields.FormatFixedLine2(m_listenerTextWriter.Fields);
+			//m_logFileStream.BeginWrite(
+
+			//LoggerFieldsData l_data = new LoggerFieldsData(m_name, m_appName, m_hostName);
+			//l_data.Set(xDateTimeToString(m_outfmtTranslated), a_type, xGetCaller(2), a_msg);
+			//Trace.WriteLine(l_data.FormatFixedLine(m_listenerTextWriter.Fields));
+			//l_data.SetFormatFixedLine(LoggerFieldsItemType.TextWriter, m_listenerTextWriter.Fields);
+			//if (m_stdout)
+			//    l_data.SetFormatFixedLine(LoggerFieldsItemType.Console, m_listenerTextWriter.Fields);
+
+
+			//foreach (LoggerFieldsItemType l_type in m_fieldsItems.Keys)
+			//    l_data.SetFormatFixedLine(l_type, m_fieldsItems[l_type]);
+
+			//Trace.Write(m_fields);
+			//Trace.WriteLine("");
+		}
+
+		public void Exception(Exception a_e)
+		{
+			//--------------------------------------------------------------------
+			//-- set fields and call trace
+			//--------------------------------------------------------------------
+			//m_fields.Set(xDateTimeToString(m_outfmtTranslated), "except", xGetCaller(2), a_e);
+			//Trace.Write(m_fields);
+		}
+		#endregion
+
+
+		//------------------------------------------------------------------------
+		//-- private static routines
+		//------------------------------------------------------------------------
+		#region Static-private
+		private static LoggerFieldsItem[] xCreateLoggerFieldsItem(LoggerFields a_fields)
+		{
+			return new LoggerFieldsItem[2] {
+												new LoggerFieldsItem(LoggerFieldsItemType.Console, a_fields),
+												new LoggerFieldsItem(LoggerFieldsItemType.TextWriter, a_fields)
+											};
+		}
+
+		static string xGenerateName(Random random, int length)
+		{
+			const string ValidChars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+			char[] chars = new char[length];
+			for (int i = 0; i < length; i++)
+				chars[i] = ValidChars[random.Next(ValidChars.Length)];
+			return new string(chars);
+		}
+
+		//------------------------------------------------------------------------
+		//------------------------------------------------------------------------
+		private static StackFrame xGetCaller(int a_ignore = 1)
+		{
+			StackTrace l_stackTrace = new StackTrace(true);
+			StackFrame[] l_stackFrames = l_stackTrace.GetFrames();
+
+			return l_stackFrames[a_ignore + 1];
+		}
+
+		//------------------------------------------------------------------------
+		//------------------------------------------------------------------------
+		private static string xDateTimeToString(string a_fmt)
+		{
+			return xDateTimeToString(DateTime.Now, a_fmt);
+		}
+		private static string xDateTimeToString(DateTime a_dt, string a_fmt)
+		{
+			//--------------------------------------------------------------------
+			//-- see if anything to format
+			//--------------------------------------------------------------------
+			if (a_fmt == null || a_fmt.Length == 0)
+				return "";
+
+			//--------------------------------------------------------------------
+			//-- do base format, then look for extension that logger has added
+			//--------------------------------------------------------------------
+			string l_ret = a_dt.ToString(a_fmt);
+
+			if (l_ret.IndexOf("{k}") > -1)
+				l_ret = l_ret.Replace("{k}", a_dt.Millisecond.ToString("000"));
+
+			return l_ret;
+		}
+
+		//------------------------------------------------------------------------
+		//------------------------------------------------------------------------
+		private static string xTranslateDateTimeFmt(string a_dtfmt)
+		{
+			if (a_dtfmt == null || a_dtfmt.Length == 0)
+				return null;
+
+			a_dtfmt = a_dtfmt.Replace("%a", "ddd");			//-- Abbreviated weekday name
+			a_dtfmt = a_dtfmt.Replace("%A", "dddd");		//-- Full weekday name
+			a_dtfmt = a_dtfmt.Replace("%b", "MMM");			//-- Abbreviated month name
+			a_dtfmt = a_dtfmt.Replace("%B", "MMMM");		//-- Full month name
+			a_dtfmt = a_dtfmt.Replace("%d", "dd");			//-- Day of month as decimal number (01 � 31)
+			a_dtfmt = a_dtfmt.Replace("%I", "hh");			//-- Hour in 12-hour format (01 � 12)
+			a_dtfmt = a_dtfmt.Replace("%H", "HH");			//-- Hour in 24-hour format (00 � 23)
+			a_dtfmt = a_dtfmt.Replace("%m", "MM");			//-- Month as decimal number (01 � 12)
+			a_dtfmt = a_dtfmt.Replace("%M", "mm");			//-- Minute as decimal number (00 � 59)
+			a_dtfmt = a_dtfmt.Replace("%S", "ss");			//-- Second as decimal number (00 � 59)
+			a_dtfmt = a_dtfmt.Replace("%y", "yy");			//-- Year without century, as decimal number (00 � 99)
+			a_dtfmt = a_dtfmt.Replace("%Y", "yyyy");		//-- Year with century, as decimal number
+			a_dtfmt = a_dtfmt.Replace("%p", "tt");			//-- Current locale's A.M./P.M. indicator for 12-hour clock
+			a_dtfmt = a_dtfmt.Replace("%%", "%");
+
+			a_dtfmt = a_dtfmt.Replace("%t", "{k}");			//-- milliseconds
+
+			return a_dtfmt;
+
+			/*
+			%j 
+			Day of year as decimal number (001 � 366) 
+			%U 
+			Week of year as decimal number, with Sunday as first day of week (00 � 53) 
+			%w 
+			Weekday as decimal number (0 � 6; Sunday is 0) 
+			%W 
+			Week of year as decimal number, with Monday as first day of week (00 � 53) 
+			%z, %Z 
+			Either the time-zone name or time zone abbreviation, depending on registry settings; no characters if time zone is unknown 
+			*/
+		}
+		#endregion
+	}
+
+	#region LoggerFields
+	public class LoggerFieldsData
+	{
+		private static char[] m_crlfDelim = { '\r', '\n' };
+
+		private string m_loggerName;
+
+		private string m_dt;
+		private string m_type;
+		private string m_msg;
+
+		private string m_appName;
+		private string m_fileName;
+		private string m_hostName;
+		private string m_lineno;
+		private string m_methodName;
+		private string m_methodDeclareName;
+		private string m_methodDeclareNamespace;
+		private string m_methodDeclareDllName;
+
+		private Exception m_exception;
+
+		private StringBuilder m_fixedLine;
+
+		private string l_fixedMsg;
+
+		private Dictionary<LoggerFieldsItemType, string> m_fixedLines;
+
+
+
+		public LoggerFieldsData(string a_loggerName, string a_appName, string a_hostName)
+		{
+			m_loggerName = a_loggerName;
+			m_appName = a_appName;
+			m_hostName = a_hostName;
+
+			m_fixedLine = new StringBuilder();
+
+			m_fixedLines = new Dictionary<LoggerFieldsItemType, string>();
+		}
+
+		public void Set(string a_dt, string a_type, StackFrame a_caller, string a_msg)
+		{
+			xSet(a_dt, a_type, a_caller, a_msg, null);
+		}
+
+		public void Set(string a_dt, string a_type, StackFrame a_caller, Exception a_exception)
+		{
+			xSet(a_dt, a_type, a_caller, null, a_exception);
+		}
+
+		private void xSet(string a_dt, string a_type, StackFrame a_caller, string a_msg, Exception a_exception)
+		{
+			m_dt = a_dt;
+			m_type = a_type;
+			m_msg = a_msg;
+			m_exception = a_exception;
+
+			m_fileName = Path.GetFileName(a_caller.GetFileName());
+			m_lineno = a_caller.GetFileLineNumber().ToString();
+
+			System.Reflection.MethodBase l_method = a_caller.GetMethod();
+
+			m_methodName = l_method.Name;
+			m_methodDeclareName = l_method.DeclaringType.Name;
+			m_methodDeclareNamespace = l_method.DeclaringType.Namespace;
+			m_methodDeclareDllName = l_method.DeclaringType.Module.FullyQualifiedName;
+		}
+
+		public void SetFormatFixedLine(LoggerFieldsItemType a_type, LoggerFieldsUse a_fields)
+		{
+			string l_linebeg = m_dt + ' ' +
+							   xFormatFixedLineField(a_fields.HostName, a_fields.HostNameLen, m_hostName) +
+							   xFormatFixedLineField(a_fields.AppName, a_fields.AppNameLen, m_appName) +
+							   xFormatFixedLineField(a_fields.FileName, a_fields.FileNameLen, m_fileName) +
+							   xFormatFixedLineField(a_fields.MethodName, a_fields.MethodNameLen, m_methodName) +
+							   xFormatFixedLineField(a_fields.Lineno, a_fields.LinenoLen, m_lineno) +
+							   xFormatFixedLineField(a_fields.MethodDeclareNamespace, a_fields.MethodDeclareNamespaceLen, m_methodDeclareNamespace) +
+							   xFormatFixedLineField(a_fields.MethodDeclareName, a_fields.MethodDeclareNameLen, m_methodDeclareName) +
+							   xFormatFixedLineField(a_fields.MethodDeclareDllName, a_fields.MethodDeclareDllNameLen, m_methodDeclareDllName) +
+							   xFormatFixedLineField(true, 8, m_type);
+			if (m_msg != null)
+				m_fixedLines.Add(a_type, l_linebeg + m_msg);
+			//else
+			//{
+			//    string l_beg = m_fixedLine.ToString();
+
+			//    m_fixedLine.Append("Exception::");
+
+			//    string[] l_lines = m_exception.ToString().Split(m_crlfDelim);
+			//    foreach (string l_line in l_lines)
+			//    {
+			//        if (l_line.Length > 0)
+			//            m_fixedLine.Append("\r\n" + l_beg).Append(l_line);
+			//    }
+			//}
+
+			//return m_fixedLine.ToString();
+		}
+
+		public string GetFormatFixedLine(LoggerFieldsItemType a_type)
+		{
+			return m_fixedLines[a_type];
+		}
+
+		public string FormatFixedLine(LoggerFieldsUse a_fields)
+		{
+			//m_fixedLine.Length = 0;
+			
+			//m_fixedLine.Append(m_dt + " ").
+			//            Append(xFormatFixedLineField(a_fields.HostName, a_fields.HostNameLen, m_hostName)).
+			//            Append(xFormatFixedLineField(a_fields.AppName, a_fields.AppNameLen, m_appName)).
+			//            Append(xFormatFixedLineField(a_fields.FileName, a_fields.FileNameLen, m_fileName)).
+			//            Append(xFormatFixedLineField(a_fields.MethodName, a_fields.MethodNameLen, m_methodName)).
+			//            Append(xFormatFixedLineField(a_fields.Lineno, a_fields.LinenoLen, m_lineno)).
+			//            Append(xFormatFixedLineField(a_fields.MethodDeclareNamespace, a_fields.MethodDeclareNamespaceLen, m_methodDeclareNamespace)).
+			//            Append(xFormatFixedLineField(a_fields.MethodDeclareName, a_fields.MethodDeclareNameLen, m_methodDeclareName)).
+			//            Append(xFormatFixedLineField(a_fields.MethodDeclareDllName, a_fields.MethodDeclareDllNameLen, m_methodDeclareDllName)).
+			//            Append(xFormatFixedLineField(true, 8, m_type));
+			//if (m_msg != null)
+			//    m_fixedLine.Append(m_msg);
+			//else
+			//{
+			//    string l_beg = m_fixedLine.ToString();
+
+			//    m_fixedLine.Append("Exception::");
+
+			//    string[] l_lines = m_exception.ToString().Split(m_crlfDelim);
+			//    foreach (string l_line in l_lines)
+			//    {
+			//        if (l_line.Length > 0)
+			//            m_fixedLine.Append("\r\n" + l_beg).Append(l_line);
+			//    }
+			//}
+
+			//return m_fixedLine.ToString();
+
+			string l_linebeg = m_dt + ' ' +
+							   xFormatFixedLineField(a_fields.HostName, a_fields.HostNameLen, m_hostName) +
+							   xFormatFixedLineField(a_fields.AppName, a_fields.AppNameLen, m_appName) +
+							   xFormatFixedLineField(a_fields.FileName, a_fields.FileNameLen, m_fileName) +
+							   xFormatFixedLineField(a_fields.MethodName, a_fields.MethodNameLen, m_methodName) +
+							   xFormatFixedLineField(a_fields.Lineno, a_fields.LinenoLen, m_lineno) +
+							   xFormatFixedLineField(a_fields.MethodDeclareNamespace, a_fields.MethodDeclareNamespaceLen, m_methodDeclareNamespace) +
+							   xFormatFixedLineField(a_fields.MethodDeclareName, a_fields.MethodDeclareNameLen, m_methodDeclareName) +
+							   xFormatFixedLineField(a_fields.MethodDeclareDllName, a_fields.MethodDeclareDllNameLen, m_methodDeclareDllName) +
+							   xFormatFixedLineField(true, 8, m_type);
+			if (m_msg != null)
+				return l_linebeg + m_msg;
+			//else
+			//{
+			//    string l_beg = m_fixedLine.ToString();
+
+			//    m_fixedLine.Append("Exception::");
+
+			//    string[] l_lines = m_exception.ToString().Split(m_crlfDelim);
+			//    foreach (string l_line in l_lines)
+			//    {
+			//        if (l_line.Length > 0)
+			//            m_fixedLine.Append("\r\n" + l_beg).Append(l_line);
+			//    }
+			//}
+
+			//return m_fixedLine.ToString();
+			return "";
+		}
+
+		public string FormatFixedLine2(LoggerFieldsUse a_fields)
+		{
+			string l_line = 
+			//m_fixedLine.Length = 0;
+
+			//m_fixedLine.Append(m_dt + " ").
+			//            Append(xFormatFixedLineField(a_fields.HostName, a_fields.HostNameLen, m_hostName)).
+			//            Append(xFormatFixedLineField(a_fields.AppName, a_fields.AppNameLen, m_appName)).
+			//            Append(xFormatFixedLineField(a_fields.FileName, a_fields.FileNameLen, m_fileName)).
+			//            Append(xFormatFixedLineField(a_fields.MethodName, a_fields.MethodNameLen, m_methodName)).
+			//            Append(xFormatFixedLineField(a_fields.Lineno, a_fields.LinenoLen, m_lineno)).
+			//            Append(xFormatFixedLineField(a_fields.MethodDeclareNamespace, a_fields.MethodDeclareNamespaceLen, m_methodDeclareNamespace)).
+			//            Append(xFormatFixedLineField(a_fields.MethodDeclareName, a_fields.MethodDeclareNameLen, m_methodDeclareName)).
+			//            Append(xFormatFixedLineField(a_fields.MethodDeclareDllName, a_fields.MethodDeclareDllNameLen, m_methodDeclareDllName)).
+			//            Append(xFormatFixedLineField(true, 8, m_type));
+			//if (m_msg != null)
+			//    m_fixedLine.Append(m_msg);
+			//else
+			//{
+			//    string l_beg = m_fixedLine.ToString();
+
+			//    m_fixedLine.Append("Exception::");
+
+			//    string[] l_lines = m_exception.ToString().Split(m_crlfDelim);
+			//    foreach (string l_line in l_lines)
+			//    {
+			//        if (l_line.Length > 0)
+			//            m_fixedLine.Append("\r\n" + l_beg).Append(l_line);
+			//    }
+			//}
+
+			//return m_fixedLine.ToString();
+
+			string l_linebeg = m_dt + ' ' +
+							   xFormatFixedLineField(a_fields.HostName, a_fields.HostNameLen, m_hostName) +
+							   xFormatFixedLineField(a_fields.AppName, a_fields.AppNameLen, m_appName) +
+							   xFormatFixedLineField(a_fields.FileName, a_fields.FileNameLen, m_fileName) +
+							   xFormatFixedLineField(a_fields.MethodName, a_fields.MethodNameLen, m_methodName) +
+							   xFormatFixedLineField(a_fields.Lineno, a_fields.LinenoLen, m_lineno) +
+							   xFormatFixedLineField(a_fields.MethodDeclareNamespace, a_fields.MethodDeclareNamespaceLen, m_methodDeclareNamespace) +
+							   xFormatFixedLineField(a_fields.MethodDeclareName, a_fields.MethodDeclareNameLen, m_methodDeclareName) +
+							   xFormatFixedLineField(a_fields.MethodDeclareDllName, a_fields.MethodDeclareDllNameLen, m_methodDeclareDllName) +
+							   xFormatFixedLineField(true, 8, m_type);
+			if (m_msg != null)
+				return l_linebeg + m_msg;
+			//else
+			//{
+			//    string l_beg = m_fixedLine.ToString();
+
+			//    m_fixedLine.Append("Exception::");
+
+			//    string[] l_lines = m_exception.ToString().Split(m_crlfDelim);
+			//    foreach (string l_line in l_lines)
+			//    {
+			//        if (l_line.Length > 0)
+			//            m_fixedLine.Append("\r\n" + l_beg).Append(l_line);
+			//    }
+			//}
+
+			//return m_fixedLine.ToString();
+			return "";
+		}
+
+
+
+		private string xFormatFixedLineField(bool a_fieldUse, int a_fieldLen, string a_fieldData)
+		{
+			if (!a_fieldUse)
+				return "";
+
+			string l_str = a_fieldData;
+			if (a_fieldData.Length < a_fieldLen)
+				l_str = a_fieldData.PadRight(a_fieldLen);
+			else if (a_fieldData.Length > a_fieldLen)
+				l_str = a_fieldData.Substring(0, a_fieldLen);
+
+			return l_str + ' ';
+		}
+
+
+		//------------------------------------------------------------------------
+		//------------------------------------------------------------------------
+		public string LoggerName { get { return m_loggerName; } }
+		//public string DateTime { get { return m_dt; } }
+		//public string Type { get { return m_type; } }
+
+		//public string AppName { get { return m_appName; } }
+		//public string FileName { get { return m_fileName; } }
+		//public string HostName { get { return m_hostName; } }
+		//public string Lineno { get { return m_lineno; } }
+		//public string MethodName { get { return m_methodName; } }
+		//public string MethodDeclareName { get { return m_methodDeclareName; } }
+		//public string MethodDeclareNamespace { get { return m_methodDeclareNamespace; } }
+		//public string MethodDeclareDllName { get { return m_methodDeclareDllName; } }
+	}
+
+	public class LoggerFieldsItem
+	{
+		private LoggerFieldsItemType m_type;
+		private LoggerFields m_fields;
+
+		public LoggerFieldsItem(LoggerFieldsItemType a_type, LoggerFields a_fields)
+		{
+			m_type = a_type;
+			m_fields = a_fields;
+		}
+
+		public LoggerFieldsItemType Type { get { return m_type; } }
+		public LoggerFields Fields { get { return m_fields; } }
+	}
+
+	public class LoggerFieldsUse
+	{
+		private int m_appName;
+		private int m_fileName;
+		private int m_hostName;
+		private int m_lineno;
+		private int m_methodName;
+		private int m_methodDeclareName;
+		private int m_methodDeclareNamespace;
+		private int m_methodDeclareDllName;
+
+		private bool m_appNameOn;
+		private bool m_fileNameOn;
+		private bool m_hostNameOn;
+		private bool m_linenoOn;
+		private bool m_methodNameOn;
+		private bool m_methodDeclareNameOn;
+		private bool m_methodDeclareNamespaceOn;
+		private bool m_methodDeclareDllNameOn;
+
+		private LoggerFields m_fields;
+
+		public LoggerFieldsUse(LoggerFields a_fields)
+		{
+			m_fields = a_fields;
+
+			xSet(ref m_appName, ref m_appNameOn, LoggerFields.AppName, 15);
+			xSet(ref m_fileName, ref m_fileNameOn, LoggerFields.FileName, 20);
+			xSet(ref m_hostName, ref m_hostNameOn, LoggerFields.HostName, 10);
+			xSet(ref m_lineno, ref m_linenoOn, LoggerFields.Lineno, 6);
+			xSet(ref m_methodName, ref m_methodNameOn, LoggerFields.MethodName, 20);
+			xSet(ref m_methodDeclareName, ref m_methodDeclareNameOn, LoggerFields.MethodDeclareName, 20);
+			xSet(ref m_methodDeclareNamespace, ref m_methodDeclareNamespaceOn, LoggerFields.MethodDeclareNamespace, 30);
+			xSet(ref m_methodDeclareDllName, ref m_methodDeclareDllNameOn, LoggerFields.MethodDeclareDllName, 50);
+		}
+
+		//------------------------------------------------------------------------
+		//------------------------------------------------------------------------
+		public bool AppName { get { return m_appNameOn; } }
+		public int AppNameLen
+		{
+			get { return m_appName; }
+			set { xSet2(ref m_appName, ref m_appNameOn, value); }
+		}
+
+		public bool FileName { get { return m_fileNameOn; } }
+		public int FileNameLen
+		{
+			get { return m_fileName; }
+			set { xSet2(ref m_fileName, ref m_fileNameOn, value); }
+		}
+
+		public bool HostName { get { return m_hostNameOn; } }
+		public int HostNameLen
+		{
+			get { return m_hostName; }
+			set { m_hostName = value; }
+		}
+
+		public bool Lineno { get { return m_linenoOn; } }
+		public int LinenoLen
+		{
+			get { return m_lineno; }
+			set { m_lineno = value; }
+		}
+
+		public bool MethodName { get { return m_methodNameOn; } }
+		public int MethodNameLen
+		{
+			get { return m_methodName; }
+			set { m_methodName = value; }
+		}
+
+		public bool MethodDeclareName { get { return m_methodDeclareNameOn; } }
+		public int MethodDeclareNameLen
+		{
+			get { return m_methodDeclareName; }
+			set { m_methodDeclareName = value; }
+		}
+
+		public bool MethodDeclareNamespace { get { return m_methodDeclareNamespaceOn; } }
+		public int MethodDeclareNamespaceLen
+		{
+			get { return m_methodDeclareNamespace; }
+			set { m_methodDeclareNamespace = value; }
+		}
+
+		public bool MethodDeclareDllName { get { return m_methodDeclareDllNameOn; } }
+		public int MethodDeclareDllNameLen
+		{
+			get { return m_methodDeclareDllName; }
+			set { m_methodDeclareDllName = value; }
+		}
+
+		//------------------------------------------------------------------------
+		//------------------------------------------------------------------------
+		private void xSet(ref int a_field, ref bool a_fieldOn, LoggerFields a_fieldCheck, int a_len)
+		{
+			if ((m_fields & a_fieldCheck) == 0)
+			{
+				a_field = 0;
+				a_fieldOn = false;
+			}
+			else
+			{
+				a_field = a_len;
+				a_fieldOn = true;
+			}
+		}
+		private void xSet2(ref int a_field, ref bool a_fieldOn, int a_len)
+		{
+			if (a_len == 0)
+			{
+				a_field = 0;
+				a_fieldOn = false;
+			}
+			else
+			{
+				a_field = a_len;
+				a_fieldOn = true;
+			}
+		}
+	}
+	#endregion
+
+	//----------------------------------------------------------------------------
+	//-- LoggerListeners
+	//--
+	//-- These listeners override certain Write methods, so that only trace
+	//-- requirest from Logger are actually logged.
+	//----------------------------------------------------------------------------
+	#region LoggerListeners
+	#region LoggerConsoleListener
+	class LoggerConsoleListener : ConsoleTraceListener
+	{
+		private Logger m_logger;
+		private LoggerFieldsUse m_fields;
+
+		public LoggerConsoleListener(Logger a_logger, LoggerFieldsUse a_fields)
+			: base()
+		{
+			m_logger = a_logger;
+			m_fields = a_fields;
+		}
+
+		public override void Write(Object a_value)
+		{
+		}
+		public override void Write(string a_message)
+		{
+		}
+		public override void Write(Object a_value, string a_category)
+		{
+		}
+		public override void Write(string a_message, string a_category)
+		{
+		}
+		public override void WriteLine(Object a_value)
+		{
+		}
+		public override void WriteLine(string a_message)
+		{
+			base.WriteLine(m_logger.Data.FormatFixedLine(m_fields));
+		}
+		public override void WriteLine(Object a_value, string a_category)
+		{
+		}
+		public override void WriteLine(string a_message, string a_category)
+		{
+		}
+	}
+	#endregion
+	#region LoggerTextWriterListener
+	class LoggerTextWriterListener : TextWriterTraceListener
+	{
+		private int m_appDomainId;
+		private int m_currentThreadId;
+		private int m_currentThreadManagedThreadId;
+
+		private Logger m_logger;
+		private LoggerFieldsUse m_fields;
+
+		private FileStream m_stream;
+
+		//public LoggerTextWriterListener(Logger a_logger, FileStream a_stream)
+		public LoggerTextWriterListener(Logger a_logger, LoggerFieldsUse a_fields, FileStream a_stream)
+			: base(a_stream)
+		{
+			m_logger = a_logger;
+			m_fields = a_fields;
+			m_stream = a_stream;
+
+			m_appDomainId = AppDomain.CurrentDomain.Id.GetHashCode();
+			m_currentThreadId = Thread.CurrentThread.GetHashCode();
+			m_currentThreadManagedThreadId = Thread.CurrentThread.ManagedThreadId.GetHashCode();
+		}
+
+		public LoggerFieldsUse Fields { get { return m_fields; } }
+
+		public override bool IsThreadSafe { get { return base.IsThreadSafe; } }
+
+		public override void Write(Object a_value)
+		{
+		}
+		public override void Write(string a_message)
+		{
+		}
+		public override void Write(Object a_value, string a_category)
+		{
+		}
+		public override void Write(string a_message, string a_category)
+		{
+		}
+		public override void WriteLine(Object a_value)
+		{
+			//if (a_value.GetType() == typeof(LoggerFieldsData))
+			//    if (m_logger.Name.Equals(((LoggerFieldsData)a_value).LoggerName))
+			//    {
+			//        lock (m_logger)
+			//        {
+			//            base.WriteLine(((LoggerFieldsData)a_value).GetFormatFixedLine(LoggerFieldsItemType.TextWriter));
+			//        }
+			//    }
+		}
+		public override void WriteLine(string a_message)
+		{
+			//if (m_appDomainId == AppDomain.CurrentDomain.Id.GetHashCode()
+			//        && m_currentThreadId == Thread.CurrentThread.GetHashCode()
+			//        && m_currentThreadManagedThreadId == Thread.CurrentThread.ManagedThreadId.GetHashCode())
+			//Trace.WriteLine(l_data.FormatFixedLine(m_listenerTextWriter.Fields));
+			base.WriteLine(m_logger.Data.FormatFixedLine(m_fields));
+		}
+		public override void WriteLine(Object a_value, string a_category)
+		{
+		}
+		public override void WriteLine(string a_message, string a_category)
+		{
+		}
+	}
+	#endregion
+	#endregion
+//}
