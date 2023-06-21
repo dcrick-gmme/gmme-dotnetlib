@@ -26,40 +26,59 @@ using System.Text;
 	{
 		private class COptItem
 		{
-			private string m_opt;
-			private string? m_val;
+			private string? m_opt;
 			private string? m_optFile;
+			private string? m_optOrig;
+			private string? m_val;
+			private string? m_valOrig;
+			private string? m_tags;
 
 //			public SubCmd? m_subCmd;
 
 			public COptItem()
 			{
-				m_opt = "";
-				m_val = "";
-				m_optFile = "";
+				m_opt = null;
+				m_optFile = null;
+				m_optOrig = null;
+				m_tags = null;
+				m_val = null;
+				m_valOrig = null;
 //				m_subCmd = null;
 			}
 			public COptItem(COptItem a_src)
 			{
 				m_opt = a_src.m_opt;
-				m_val = a_src.m_val;
+				m_optOrig = a_src.m_optOrig;
 				m_optFile = a_src.m_optFile;
+				m_val = a_src.m_val;
+				m_valOrig = a_src.m_valOrig;
 //				m_subCmd = a_src.m_subCmd;
 			}
-			public string Opt
+
+			public string? Opt
 			{
 				get		{ return m_opt; }
 				set		{ m_opt = value; }
+			}
+			public string? OptFile
+			{
+				get		{ return m_optFile; }
+				set		{ m_optFile = value; }
+			}
+			public string? OptOrig
+			{
+				get		{ return m_optOrig; }
+				set		{ m_optOrig = value; }
 			}
 			public string? Val
 			{
 				get		{ return m_val; }
 				set		{ m_val = value; }
 			}
-			public string? OptFile
+			public string? ValOrig
 			{
-				get		{ return m_optFile; }
-				set		{ m_optFile = value; }
+				get		{ return m_valOrig; }
+				set		{ m_valOrig = value; }
 			}
 /*
 			public SubCmd SubCmd
@@ -77,7 +96,7 @@ using System.Text;
 
 		//------------------------------------------------------------------------
 		//-- initialize the internal optitem list
-		private void x_initOptItemList()
+		private void initOptItemList_()
 		{
 			if (m_list != null)
 				return;
@@ -121,6 +140,28 @@ using System.Text;
 			AddArgsArray(a_args);
 		}
 */
+
+		public bool IsInit
+		{
+			get		{ return m_init; }
+		}
+
+
+		//----------------------------------------------------------------------------------
+		//----------------------------------------------------------------------------------
+		//-- Dump
+		//----------------------------------------------------------------------------------
+		//----------------------------------------------------------------------------------
+		public void Dump()
+		{
+	        if (!m_init)
+			{
+				Console.WriteLine("CMDine: Dump - nothing exists...");
+            	return;
+			}
+
+		}
+
 /*
 		//-- add Args members
 		public void AddArgsArray(string[] a_args)
@@ -133,7 +174,7 @@ using System.Text;
 
 
 			//-- initialize array
-			x_initOptItemList();
+			initOptItemList_();
 
 
 			//-- loop thru all arguments and add in opt,val pears
@@ -163,7 +204,7 @@ using System.Text;
 
 					//-- add item to list
 					item.Val = subEnv(item.Val);
-					addItemToList(item);
+					AddItemToList_(item);
 				}
 				else if (arg[0] == '@')
 					AddArgsFile(subEnv(arg.Substring(1)));
@@ -223,13 +264,13 @@ using System.Text;
 		//----------------------------------------------------------------------------------
 		public void AddArgsLine(string a_line)
 		{
-			AddArgsLine(a_line, "");
+			AddArgsLine(a_line, null);
 		}
 		public void AddArgsLine(StringBuilder a_line)
 		{
 			AddArgsLine(a_line.ToString());
 		}
-		public void AddArgsLine(string a_line, string a_file)
+		public void AddArgsLine(string a_line, string? a_file)
 		{
 			char endChr;
 
@@ -242,7 +283,7 @@ using System.Text;
 
 
 			//-- initialize array and item
-			x_initOptItemList();
+			initOptItemList_();
 
 			item.OptFile = a_file;
 
@@ -258,7 +299,8 @@ using System.Text;
 					item.Val = "";
 					if ((i = tmp.IndexOf(" ")) == -1)
 					{
-						item.Opt = tmp;
+						item.OptOrig = tmp;
+						item.Opt = tmp.ToUpper();
 						tmp = "";
 					}
 					else
@@ -304,8 +346,10 @@ using System.Text;
 
 					//-- add item to list
 //					item.SubCmd = null;
-//					item.Val = subEnv(item.Val);
-//					addItemToList(item);
+					item.OptOrig = item.Opt;
+					item.ValOrig = item.Val;
+					item.Val = xSubEnv(item.Val);
+					AddItemToList_(item);
 				}
 /*
 				else if (tmp[0] == '@')
@@ -677,22 +721,21 @@ using System.Text;
 		}
 */
 
-/*
 		//------------------------------------------------------------------------
 		//------------------------------------------------------------------------
 		//------------------------------------------------------------------------
-		private void addItemToList(COptItem a_item)
+		private void AddItemToList_(COptItem a_item)
 		{
-			COptItem item = findOptHelper(a_item.Opt, false);
+			COptItem? item = xFindOptHelper(a_item.Opt, false);
 			if (item != null)
-				m_list.Remove(item);
-			m_list.Add(new COptItem(a_item));
+				m_list?.Remove(item);
+			m_list?.Add(new COptItem(a_item));
 		}
 
-		private COptItem findOptHelper(string a_optName, bool a_ignoreCase)
+		private COptItem? xFindOptHelper(string? a_optName, bool a_ignoreCase)
 		{
 			//-- make sure list is not empty
-			if (m_list.Count == 0)
+			if (m_list?.Count == 0)
 				return null;
 
 			//-- determine compare function and search for option
@@ -705,6 +748,7 @@ using System.Text;
 			return null;
 		}
 
+/*
 		private bool getInfoOptPullData(ref string a_optStr, ref string a_retData)
 		{
 			int pos;
@@ -731,14 +775,14 @@ using System.Text;
 
 			return item.Val;
 		}
-
-		private string subEnv(string a_str)
+*/
+		private string? xSubEnv(string a_str)
 		{
 			int p1;
 			int p2;
 
 			string env;
-			string envStr;
+			string? envStr;
 
 
 			//-----------------------------------------------------------------------
@@ -750,22 +794,22 @@ using System.Text;
 			//-----------------------------------------------------------------------
 			//-- loop thru the string and see what we have.  Cmd line enviornment
 			//-- variables are substitured with "$(VAR)"
-			while ((p1 = a_str.IndexOf("$(")) != -1)
+			while ((p1 = a_str.IndexOf("${")) != -1)
 			{
 				//-- find end of environment variable
-				if ((p2 = a_str.IndexOf(")", p1 + 2)) == -1)
+				if ((p2 = a_str.IndexOf("}", p1 + 2)) == -1)
 					return a_str;
 
 
 				//-- pull the string, get environment and subst
 				env = a_str.Substring(p1 + 2, p2 - p1 - 2);
 				envStr = Environment.GetEnvironmentVariable(env);
-				a_str = a_str.Replace("$(" + env + ")", envStr);
+				a_str = a_str.Replace("${" + env + "}", envStr);
 			}
 
 			return a_str;
 		}
-*/
+
 /*
 		//------------------------------------------------------------------------
 		//------------------------------------------------------------------------

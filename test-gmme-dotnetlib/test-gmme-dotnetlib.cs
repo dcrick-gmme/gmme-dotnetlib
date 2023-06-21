@@ -66,6 +66,7 @@ class TestCMDLine
 	{
 		//-- build test string to use for testing
 		StringBuilder l_sb = new StringBuilder();
+
 		l_sb.Append("-testftp1 host1,user1,password1 ").
 				Append("-testftp2 host2,user2,password2,type2 ").
 				Append("-TestFtp3 host3,user3,password3,type3 ");
@@ -74,6 +75,8 @@ class TestCMDLine
 				Append("-TestOptValue3 TestOptValue3 ");
 		l_sb.Append("-testisopt1 ").
 				Append("-TestIsOpt2 ");
+		l_sb.Append("-testsub01 '${CMDLINE_TESTSUB01}' ").
+				Append("-testsub02 '${CMDLINE_TESTSUB02}' ");
 
 		//-- test 
 		GMMELib.Utils.CMDLine l_cmdline = new GMMELib.Utils.CMDLine();
