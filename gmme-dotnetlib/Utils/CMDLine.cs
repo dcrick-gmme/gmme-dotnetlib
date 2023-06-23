@@ -14,6 +14,7 @@ namespace GMMELib.Utils;
 
 using System;
 using System.Collections;
+//using System.Diagnostics.CodeAnalysis.NotNullWhenAttribute;
 using System.IO;
 using System.Text;
 
@@ -22,74 +23,10 @@ using System.Text;
 	/// <summary>
 	/// This a command line processor class for processing command line options.
 	/// </summary>
-	public class CMDLine
+	public partial class CMDLine
 	{
-		private class COptItem
-		{
-			private string? m_opt;
-			private string? m_optFile;
-			private string? m_optOrig;
-			private string? m_val;
-			private string? m_valOrig;
-			private string? m_tags;
-
-//			public SubCmd? m_subCmd;
-
-			public COptItem()
-			{
-				m_opt = null;
-				m_optFile = null;
-				m_optOrig = null;
-				m_tags = null;
-				m_val = null;
-				m_valOrig = null;
-//				m_subCmd = null;
-			}
-			public COptItem(COptItem a_src)
-			{
-				m_opt = a_src.m_opt;
-				m_optOrig = a_src.m_optOrig;
-				m_optFile = a_src.m_optFile;
-				m_val = a_src.m_val;
-				m_valOrig = a_src.m_valOrig;
-//				m_subCmd = a_src.m_subCmd;
-			}
-
-			public string? Opt
-			{
-				get		{ return m_opt; }
-				set		{ m_opt = value; }
-			}
-			public string? OptFile
-			{
-				get		{ return m_optFile; }
-				set		{ m_optFile = value; }
-			}
-			public string? OptOrig
-			{
-				get		{ return m_optOrig; }
-				set		{ m_optOrig = value; }
-			}
-			public string? Val
-			{
-				get		{ return m_val; }
-				set		{ m_val = value; }
-			}
-			public string? ValOrig
-			{
-				get		{ return m_valOrig; }
-				set		{ m_valOrig = value; }
-			}
-/*
-			public SubCmd SubCmd
-			{
-				get		{ return m_subCmd; }
-				set		{ m_subCmd = value; }
-			}
-*/
-		};
-
-		private ArrayList? m_list = null;
+//		private ArrayList? m_list = null;
+		private SortedList<string, COptItem>? m_list = null;
 
 		private bool m_init = false;
 
@@ -101,8 +38,10 @@ using System.Text;
 			if (m_list != null)
 				return;
 
-			m_list = new ArrayList();
+//			m_list = new ArrayList();
+			m_list = new SortedList<string, COptItem>();
 		}
+//SortedList<int, string> numberNames = new SortedList<int, string>();
 
 
 		//------------------------------------------------------------------------
@@ -154,12 +93,49 @@ using System.Text;
 		//----------------------------------------------------------------------------------
 		public void Dump()
 		{
-	        if (!m_init)
+			//-----------------------------------------------------------------------
+			//-- see if anything to dump
+	        if (!m_init || m_list == null || (m_list != null && m_list.Count == 0))
 			{
 				Console.WriteLine("CMDine: Dump - nothing exists...");
             	return;
 			}
 
+			//-----------------------------------------------------------------------
+			//-- dump the list
+			System.Console.WriteLine("CMDLine: Dump - beg:");
+			if (m_list != null)
+			{
+				foreach(var l_kvp in m_list)
+				{
+					//-- determine output
+					string l_opt = l_kvp.Key;
+					string? l_val = l_kvp.Value.Val;
+					if (l_val == null)
+						l_val = "<null>";
+					else if (l_val.Length == 0)
+						l_val = "<empty>";
+
+					//-- build output string
+					StringBuilder l_dbgOut = new StringBuilder("   ");
+					l_dbgOut.Append(l_opt).Append(" == [" + l_val + "]");
+					System.Console.WriteLine(l_dbgOut);
+				}
+			}
+			System.Console.WriteLine("CMDLine: Dump - beg:");
+/*
+        print("CmdLine: Dump - beg")
+        l_opts = list(self.m_opts.keys())
+        l_opts.sort()
+        for l_opt in l_opts:
+            l_val, l_tags = (self.m_opts[l_opt]['val'], self.m_opts[l_opt]['tags'])
+            if l_val is None:           l_val = '<none>'
+            elif l_val == '':           l_val = '<empty string>'
+            else:
+                if len(l_tags) > 0:     l_val = 'X' * random.sample(range(10,20),1)[0]
+            print('   ' + l_opt + ' == [' + l_val + ']')
+        print("CmdLine: Dump - end")
+*/
 		}
 
 /*
@@ -279,13 +255,16 @@ using System.Text;
 
 			int i;
 
-			COptItem item = new COptItem();
+//			COptItem item = new COptItem();
 
 
 			//-- initialize array and item
 			initOptItemList_();
 
-			item.OptFile = a_file;
+//			item.OptFile = a_file;
+
+			string? l_opt = null;
+			string? l_val = null;
 
 
 			//-- process the line
@@ -293,20 +272,21 @@ using System.Text;
 			while (tmp.Length > 0)
 			{
 				tmp = tmp.TrimStart(null);
+				if (tmp.Length == 0)
+					break;
 				if (tmp[0] == '-' || tmp[0] == '/')
 				{
 					//-- find end of string
-					item.Val = "";
+					l_val = "";
 					if ((i = tmp.IndexOf(" ")) == -1)
 					{
-						item.OptOrig = tmp;
-						item.Opt = tmp.ToUpper();
+						l_opt = tmp;
 						tmp = "";
 					}
 					else
 					{
 						//-- pull option
-						item.Opt = tmp.Substring(0, i);
+						l_opt = tmp.Substring(0, i);
 						tmp = tmp.Remove(0, i);
 						tmp = tmp.TrimStart(null);
 						if (tmp.Length > 0)
@@ -327,29 +307,38 @@ using System.Text;
 								if ((i = tmp.IndexOf(endChr)) == -1)
 								{
 									//-- remaining part of string is value
-									item.Val = tmp;
+									l_val = tmp;
 									tmp = "";
 								}
 								else
 								{
 									//-- pull value and remove from tmp
-									item.Val = tmp.Substring(0, i);
+									l_val = tmp.Substring(0, i);
 									tmp = tmp.Remove(0, i);
-									if (endChr == ' ')
-										tmp = tmp.TrimStart(null);
-									else
+									if (endChr != ' ')
 										tmp = tmp.Remove(0, 1);
+									tmp = tmp.TrimStart(null);
 								}
 							}
 						}
 					}
 
+					//----------------------------------------------------------
 					//-- add item to list
+					addItemToList_(l_opt, l_val, a_file);
+//					addItemToList_(l_opt, l_opt, l_val, l_val, a_file);
+//					addItemToList_(l_opt, subEnv_(l_opt), l_val, subEnv_(l_val), a_file);
+//					COptItem l_item = new COptItem();
+/*
 //					item.SubCmd = null;
-					item.OptOrig = item.Opt;
-					item.ValOrig = item.Val;
-					item.Val = xSubEnv(item.Val);
-					AddItemToList_(item);
+					item.Opt = subEnv_(item.OptOrig);
+					if (item.Opt is not null)
+						item.Opt = item.Opt.ToUpper();
+					if (item.ValOrig is not null)
+						item.Val = subEnv_(item.ValOrig);
+
+					addItemToList_(item);
+*/
 				}
 /*
 				else if (tmp[0] == '@')
@@ -375,6 +364,64 @@ using System.Text;
 
 			m_init = true;
 		}
+//		private void addItemToList_(string? a_opt, string a_optOrig, string? a_val, string? a_valOrig, string? a_file)
+		private void addItemToList_(string? a_opt, string? a_val, string? a_file)
+		{
+			//------------------------------------------------------------------
+			//-- prepare a_opt
+			if (a_opt is null)
+				return;
+			string? l_opt = null;
+			l_opt = a_opt.ToUpper();
+			l_opt = subEnv_(l_opt);
+			if (l_opt is not null)
+				l_opt = l_opt.ToUpper();
+
+			//------------------------------------------------------------------
+			//-- prepare a_val
+			string ?l_val = subEnv_(a_val);
+
+
+			//-- add item to m_list
+			COptItem l_item = new COptItem(l_opt, a_opt, l_val, a_val, a_file);
+			if (m_list is not null && l_opt is not null)
+				m_list[l_opt] = l_item;
+		}
+
+		private string? subEnv_(string? a_str)
+		{
+			int p1;
+			int p2;
+
+			string env;
+			string? envStr;
+
+
+			//-----------------------------------------------------------------------
+			//-- see if we have an environment
+			if (a_str == null || a_str.Length == 0)
+				return a_str;
+
+
+			//-----------------------------------------------------------------------
+			//-- loop thru the string and see what we have.  Cmd line enviornment
+			//-- variables are substitured with "$(VAR)"
+			while ((p1 = a_str.IndexOf("${")) != -1)
+			{
+				//-- find end of environment variable
+				if ((p2 = a_str.IndexOf("}", p1 + 2)) == -1)
+					return a_str;
+
+
+				//-- pull the string, get environment and subst
+				env = a_str.Substring(p1 + 2, p2 - p1 - 2);
+				envStr = Environment.GetEnvironmentVariable(env);
+				a_str = a_str.Replace("${" + env + "}", envStr);
+			}
+
+			return a_str;
+		}
+
 
 
 		//----------------------------------------------------------------------------------
@@ -724,14 +771,8 @@ using System.Text;
 		//------------------------------------------------------------------------
 		//------------------------------------------------------------------------
 		//------------------------------------------------------------------------
-		private void AddItemToList_(COptItem a_item)
-		{
-			COptItem? item = xFindOptHelper(a_item.Opt, false);
-			if (item != null)
-				m_list?.Remove(item);
-			m_list?.Add(new COptItem(a_item));
-		}
 
+/*		
 		private COptItem? xFindOptHelper(string? a_optName, bool a_ignoreCase)
 		{
 			//-- make sure list is not empty
@@ -739,7 +780,8 @@ using System.Text;
 				return null;
 
 			//-- determine compare function and search for option
-			foreach (COptItem item in m_list)
+//			foreach (COptItem item in m_list)
+			foreach(var l_kvp in m_list)
 			{
 				if (string.Compare(a_optName, item.Opt, a_ignoreCase) == 0)
 					return item;
@@ -747,6 +789,7 @@ using System.Text;
 
 			return null;
 		}
+*/
 
 /*
 		private bool getInfoOptPullData(ref string a_optStr, ref string a_retData)
@@ -776,40 +819,6 @@ using System.Text;
 			return item.Val;
 		}
 */
-		private string? xSubEnv(string a_str)
-		{
-			int p1;
-			int p2;
-
-			string env;
-			string? envStr;
-
-
-			//-----------------------------------------------------------------------
-			//-- see if we have an environment
-			if (a_str == null || a_str.Length == 0)
-				return a_str;
-
-
-			//-----------------------------------------------------------------------
-			//-- loop thru the string and see what we have.  Cmd line enviornment
-			//-- variables are substitured with "$(VAR)"
-			while ((p1 = a_str.IndexOf("${")) != -1)
-			{
-				//-- find end of environment variable
-				if ((p2 = a_str.IndexOf("}", p1 + 2)) == -1)
-					return a_str;
-
-
-				//-- pull the string, get environment and subst
-				env = a_str.Substring(p1 + 2, p2 - p1 - 2);
-				envStr = Environment.GetEnvironmentVariable(env);
-				a_str = a_str.Replace("${" + env + "}", envStr);
-			}
-
-			return a_str;
-		}
-
 /*
 		//------------------------------------------------------------------------
 		//------------------------------------------------------------------------
