@@ -1,7 +1,10 @@
 ﻿//---------------------------------------------------------
 //---------------------------------------------------------
 #define TestCMDLine
-#define TestCMDLine_AddArgsLine
+#define TestCMDLine_AddArgsArray
+#define xTestCMDLine_AddArgsLine
+
+
 #define xTestCMDLineString
 
 #define xTestLogger1
@@ -31,9 +34,11 @@ class TestGMMELib
 
 
 #if TestCMDLine
+#if TestCMDLine_AddArgsArray
+		TestCMDLine.AddArgsArray();
+#endif
 #if TestCMDLine_AddArgsLine
 		TestCMDLine.AddArgsLine();
-//		GMMELib.Utils.CMDLine l_cmdline = new GMMELib.Utils.CMDLine();
 #endif
 //#if TestCMDLineArgs
 
@@ -61,6 +66,21 @@ class TestGMMELib
 #if TestCMDLine
 class TestCMDLine
 {
+#if TestCMDLine_AddArgsArray
+	public static void AddArgsArray()
+	{
+		string[] l_args = 
+		{
+			"-test1", "test1val",
+			"-test3opt",
+			"-test2", "test2val"
+		};
+		GMMELib.Utils.CMDLine l_cmdline = new GMMELib.Utils.CMDLine();
+		l_cmdline.AddArgsArray(l_args);
+		l_cmdline.Dump();
+	}
+#endif
+
 #if TestCMDLine_AddArgsLine
 	public static void AddArgsLine()
 	{
@@ -78,6 +98,7 @@ class TestCMDLine
 				Append("-TestIsOpt2 ");
 		l_sb.Append("-testsub01 '${CMDLINE_TESTSUB01}' ").
 				Append("-testsub02 '${CMDLINE_TESTSUB02}' ");
+		l_sb.Append("-testflag1 -testflag2 ");
 //		l_sb.Append("-testsub01 '${CMDLINE_TESTSUB01}' ");
 
 		//-- test 

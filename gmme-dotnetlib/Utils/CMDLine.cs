@@ -14,7 +14,6 @@ namespace GMMELib.Utils;
 
 using System;
 using System.Collections;
-//using System.Diagnostics.CodeAnalysis.NotNullWhenAttribute;
 using System.IO;
 using System.Text;
 
@@ -25,7 +24,6 @@ using System.Text;
 	/// </summary>
 	public partial class CMDLine
 	{
-//		private ArrayList? m_list = null;
 		private SortedList<string, COptItem>? m_list = null;
 
 		private bool m_init = false;
@@ -38,10 +36,8 @@ using System.Text;
 			if (m_list != null)
 				return;
 
-//			m_list = new ArrayList();
 			m_list = new SortedList<string, COptItem>();
 		}
-//SortedList<int, string> numberNames = new SortedList<int, string>();
 
 
 		//------------------------------------------------------------------------
@@ -86,14 +82,14 @@ using System.Text;
 		}
 
 
-		//----------------------------------------------------------------------------------
-		//----------------------------------------------------------------------------------
+		//----------------------------------------------------------------------
+		//----------------------------------------------------------------------
 		//-- Dump
-		//----------------------------------------------------------------------------------
-		//----------------------------------------------------------------------------------
+		//----------------------------------------------------------------------
+		//----------------------------------------------------------------------
 		public void Dump()
 		{
-			//-----------------------------------------------------------------------
+			//------------------------------------------------------------------
 			//-- see if anything to dump
 	        if (!m_init || m_list == null || (m_list != null && m_list.Count == 0))
 			{
@@ -101,7 +97,7 @@ using System.Text;
             	return;
 			}
 
-			//-----------------------------------------------------------------------
+			//------------------------------------------------------------------
 			//-- dump the list
 			System.Console.WriteLine("CMDLine: Dump - beg:");
 			if (m_list != null)
@@ -138,20 +134,22 @@ using System.Text;
 */
 		}
 
-/*
-		//-- add Args members
+
+		//----------------------------------------------------------------------
+		//-- AddArgsArray
+		//----------------------------------------------------------------------
 		public void AddArgsArray(string[] a_args)
 		{
 			int argsLen = a_args.GetLength(0);
 
 			string arg;
 
-			COptItem item = new COptItem();
-
 
 			//-- initialize array
 			initOptItemList_();
 
+			string? l_opt;
+			string? l_val;
 
 			//-- loop thru all arguments and add in opt,val pears
 			for (int i = 0; i < argsLen; i++)
@@ -160,11 +158,8 @@ using System.Text;
 				arg = a_args[i];
 				if (arg[0] == '-' || arg[0] == '/')
 				{
-					item.Opt = arg;
-					item.Val = "";
-					item.OptFile = "";
-					item.SubCmd = null;
-
+					l_opt = arg;
+					l_val = null;
 					if ((i + 1) < argsLen)
 					{
 						if (a_args[i + 1][0] != '-' 
@@ -172,23 +167,25 @@ using System.Text;
 							&& a_args[i + 1][0] != '@')
 						{
 							//-- we have a value with the option
-							item.Val = a_args[i + 1];
+							l_val = a_args[i + 1];
 							i++;
 						}
 					}
 
 
 					//-- add item to list
-					item.Val = subEnv(item.Val);
-					AddItemToList_(item);
+					addItemToList_(l_opt, l_val);
 				}
+/*
 				else if (arg[0] == '@')
 					AddArgsFile(subEnv(arg.Substring(1)));
+*/
 			}
 
 			m_init = true;
 		}
 
+/*
 		public void AddArgsFile(string a_file)
 		{
 			//-----------------------------------------------------------------
@@ -250,18 +247,13 @@ using System.Text;
 		{
 			char endChr;
 
-//			string fname;
 			string tmp;
 
 			int i;
 
-//			COptItem item = new COptItem();
-
 
 			//-- initialize array and item
 			initOptItemList_();
-
-//			item.OptFile = a_file;
 
 			string? l_opt = null;
 			string? l_val = null;
@@ -326,19 +318,6 @@ using System.Text;
 					//----------------------------------------------------------
 					//-- add item to list
 					addItemToList_(l_opt, l_val, a_file);
-//					addItemToList_(l_opt, l_opt, l_val, l_val, a_file);
-//					addItemToList_(l_opt, subEnv_(l_opt), l_val, subEnv_(l_val), a_file);
-//					COptItem l_item = new COptItem();
-/*
-//					item.SubCmd = null;
-					item.Opt = subEnv_(item.OptOrig);
-					if (item.Opt is not null)
-						item.Opt = item.Opt.ToUpper();
-					if (item.ValOrig is not null)
-						item.Val = subEnv_(item.ValOrig);
-
-					addItemToList_(item);
-*/
 				}
 /*
 				else if (tmp[0] == '@')
@@ -364,7 +343,10 @@ using System.Text;
 
 			m_init = true;
 		}
-//		private void addItemToList_(string? a_opt, string a_optOrig, string? a_val, string? a_valOrig, string? a_file)
+		private void addItemToList_(string? a_opt, string? a_val)
+		{
+			addItemToList_(a_opt, a_val, null);
+		}
 		private void addItemToList_(string? a_opt, string? a_val, string? a_file)
 		{
 			//------------------------------------------------------------------
