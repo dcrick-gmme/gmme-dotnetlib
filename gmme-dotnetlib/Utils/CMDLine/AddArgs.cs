@@ -11,7 +11,7 @@ namespace GMMELib.Utils;
 //
 //	Desc:	Handles methods AddArgsXXX() which is part of CMDLine.
 //
-//--------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections;
@@ -20,9 +20,9 @@ using System.Text;
 
 public partial class CMDLine
 {
-    //----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     //-- AddArgsArray
-    //----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     public void AddArgsArray(string[] a_args)
     {
         int argsLen = a_args.GetLength(0);
@@ -30,7 +30,7 @@ public partial class CMDLine
         string arg;
 
 
-        //------------------------------------------------------------------
+        //----------------------------------------------------------------------
         //-- initialize array and local variables
         initOptItemList_();
 
@@ -38,11 +38,11 @@ public partial class CMDLine
         string? l_val;
 
 
-        //------------------------------------------------------------------
+        //----------------------------------------------------------------------
         //-- loop thru all arguments and add in opt,val pears
         for (int i = 0; i < argsLen; i++)
         {
-            //--------------------------------------------------------------
+            //------------------------------------------------------------------
             //-- see if we have an arg
             arg = a_args[i];
             if (arg[0] == '-' || arg[0] == '/')
@@ -73,60 +73,57 @@ public partial class CMDLine
     }
 
 
-    //----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     //-- AddArgsFile
-    //----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     public void AddArgsFile(string? a_file)
     {
-        //-----------------------------------------------------------------
-        //-- make sure option file exists, then determine length of file
-        //-- and allocate space to hold entire file in memory
-        FileInfo? l_fi = null;
-        if (a_file is not null)
-        {
-            l_fi = new FileInfo(a_file);
-            if (!l_fi.Exists)
-                throw new System.IO.FileNotFoundException("OPT file could not be found: " + a_file);
-        }
-/*
-        long filelen = fi.Length;
-        byte[] optdata = new byte[filelen];
+        //----------------------------------------------------------------------
+        //-- make sure option file exists, then determine length of file and
+        //-- allocate space to hold entire file in memory
+        if (a_file is null)
+            return;
+        FileInfo l_fi = new FileInfo(a_file);
+        if (!l_fi.Exists)
+           throw new System.IO.FileNotFoundException("OPT file could not be found: " + a_file);
 
-        FileStream fs = fi.OpenRead();
-        int bytesread = fs.Read(optdata, 0, (int)filelen);
-        fs.Close();
-        if (bytesread != (int)filelen)
+        long l_filelen = l_fi.Length;
+        byte[] l_optdata = new byte[l_filelen];
+
+        //----------------------------------------------------------------------
+        //-- load file into memory
+        FileStream l_fs = l_fi.OpenRead();
+        int l_bytesread = l_fs.Read(l_optdata, 0, (int)l_filelen);
+        l_fs.Close();
+        if (l_bytesread != (int)l_filelen)
             throw new System.IO.EndOfStreamException("Unable to load OPT file: " + a_file);
 
+        //----------------------------------------------------------------------
+        //-- process each line in the file, by spliting up and calling
+        //-- AddArgsLine()
+        string l_line;
 
-        //--------------------------------------------------------------------------------
-        //-- process each line in the file
-        string line;
-
-        int pos = 0;
-        while (pos < filelen)
+        int l_pos = 0;
+        while (l_pos < l_filelen)
         {
-            //-----------------------------------------------------------------------
+            //------------------------------------------------------------------
             //-- pull a single line and see if its a comment line
-            line = "";
-            while (pos < filelen && optdata[pos] != '\r' && optdata[pos] != '\n')
-                line += (char)optdata[pos++];
-            while (pos < filelen && (optdata[pos] == '\r' || optdata[pos] == '\n'))
-                pos++;
-            line = line.Trim();
-            if (line.Length > 1 && line[0] == '#')
+            l_line = "";
+            while (l_pos < l_filelen && l_optdata[l_pos] != '\r' && l_optdata[l_pos] != '\n')
+                l_line += (char)l_optdata[l_pos++];
+            while (l_pos < l_filelen && (l_optdata[l_pos] == '\r' || l_optdata[l_pos] == '\n'))
+                l_pos++;
+            l_line = l_line.Trim();
+            if (l_line.Length > 1 && l_line[0] == '#')
                 continue;
-            if (line.Length > 2 && line[0] == '/' && line[1] == '/')
+            if (l_line.Length > 2 && l_line[0] == '/' && l_line[1] == '/')
                 continue;
 
 
             //-----------------------------------------------------------------------
             //-- process the options
-            AddArgsLine(line, a_file);
+            AddArgsLine(l_line, a_file);
         }
-
-        m_init = true;
-*/
     }
 
 
@@ -241,5 +238,4 @@ public partial class CMDLine
 
         m_init = true;
     }
-
 }

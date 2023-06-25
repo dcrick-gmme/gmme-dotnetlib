@@ -129,54 +129,6 @@ using System.Text;
 */
 		}
 
-/*
-		public void AddArgsFile(string a_file)
-		{
-			//-----------------------------------------------------------------
-			//-- make sure option file exists, then determine length of file
-			//-- and allocate space to hold entire file in memory
-			FileInfo fi = new FileInfo(a_file);
-			if (!fi.Exists)
-				throw new System.IO.FileNotFoundException("OPT file could not be found: " + a_file);
-
-			long filelen = fi.Length;
-			byte[] optdata = new byte[filelen];
-
-			FileStream fs = fi.OpenRead();
-			int bytesread = fs.Read(optdata, 0, (int)filelen);
-			fs.Close();
-			if (bytesread != (int)filelen)
-				throw new System.IO.EndOfStreamException("Unable to load OPT file: " + a_file);
-
-
-			//--------------------------------------------------------------------------------
-			//-- process each line in the file
-			string line;
-
-			int pos = 0;
-			while (pos < filelen)
-			{
-				//-----------------------------------------------------------------------
-				//-- pull a single line and see if its a comment line
-				line = "";
-				while (pos < filelen && optdata[pos] != '\r' && optdata[pos] != '\n')
-					line += (char)optdata[pos++];
-				while (pos < filelen && (optdata[pos] == '\r' || optdata[pos] == '\n'))
-					pos++;
-				line = line.Trim();
-				if (line.Length > 1 && line[0] == '#')
-					continue;
-				if (line.Length > 2 && line[0] == '/' && line[1] == '/')
-					continue;
-
-
-				//-----------------------------------------------------------------------
-				//-- process the options
-				AddArgsLine(line, a_file);
-			}
-		}
-*/
-
 		private void addItemToList_(string? a_opt, string? a_val)
 		{
 			addItemToList_(a_opt, a_val, null);
