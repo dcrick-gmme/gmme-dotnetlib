@@ -31,10 +31,11 @@ using System.Text;
 
 		//------------------------------------------------------------------------
 		//------------------------------------------------------------------------
+		//-- ctor's
+		//------------------------------------------------------------------------
 		//------------------------------------------------------------------------
 		public CMDLine()
 		{
-			Console.WriteLine("We are in CMDLine()!");
 		}
 /*
 		public CMDLine(bool a_initFromEnvironment)
@@ -51,9 +52,13 @@ using System.Text;
 			AddArgsArray(args2);
 		}
 */
-		public CMDLine(string a_line)
+		public CMDLine(string a_line, string? a_file = null)
 		{
-			AddArgsLine(a_line);
+			AddArgsLine(a_line, a_file);
+		}
+		public CMDLine(StringBuilder a_line, string? a_file = null)
+		{
+			AddArgsLine(a_line, a_file);
 		}
 /*
 		public CMDLine(string[] a_args)
@@ -61,6 +66,13 @@ using System.Text;
 			AddArgsArray(a_args);
 		}
 */
+/*
+	    public void AddArgsLine(StringBuilder a_line)
+    	{
+        	AddArgsLine(a_line.ToString());
+    	}
+*/
+
 
 		public bool IsInit
 		{

@@ -130,15 +130,11 @@ public partial class CMDLine
     //----------------------------------------------------------------------------------
     //-- AddArgsLine
     //----------------------------------------------------------------------------------
-    public void AddArgsLine(string a_line)
+    public void AddArgsLine(StringBuilder a_line, string? a_file = null)
     {
-        AddArgsLine(a_line, null);
+        AddArgsLine(a_line.ToString(), a_file);
     }
-    public void AddArgsLine(StringBuilder a_line)
-    {
-        AddArgsLine(a_line.ToString());
-    }
-    public void AddArgsLine(string a_line, string? a_file)
+    public void AddArgsLine(string a_line, string? a_file = null)
     {
         char endChr;
 

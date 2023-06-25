@@ -2,7 +2,8 @@
 //---------------------------------------------------------
 #define TestCMDLine
 #define xTestCMDLine_AddArgsArray
-#define TestCMDLine_AddArgsLine
+#define xTestCMDLine_AddArgsLine
+#define TestCMDLine_AddArgsLineSB
 
 
 #define xTestCMDLineString
@@ -40,7 +41,9 @@ class TestGMMELib
 #if TestCMDLine_AddArgsLine
 		TestCMDLine.AddArgsLine();
 #endif
-//#if TestCMDLineArgs
+#if TestCMDLine_AddArgsLineSB
+		TestCMDLine.AddArgsLineSB();
+#endif
 
 #endif
 	}
@@ -67,6 +70,15 @@ class TestCMDLine
 
 #if TestCMDLine_AddArgsLine
 	public static void AddArgsLine()
+	{
+		GMMELib.Utils.CMDLine l_cmdline = new GMMELib.Utils.CMDLine();
+		l_cmdline.AddArgsLine("-test${username}ftp1 host1,user1,password1");
+		l_cmdline.Dump();
+	}
+#endif
+
+#if TestCMDLine_AddArgsLineSB
+	public static void AddArgsLineSB()
 	{
 		//-- build test string to use for testing
 		StringBuilder l_sb = new StringBuilder();
