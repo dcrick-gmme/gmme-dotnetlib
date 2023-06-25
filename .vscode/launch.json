@@ -12,7 +12,13 @@
             "cwd": "${workspaceFolder}/test-gmme-dotnetlib",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
-            "stopAtEntry": false
+            "stopAtEntry": false,
+            "env":
+            {
+                "CMDLINE_TESTSUBENV": "custperf.opt-sub",
+                "CMDLINE_TESTSUB01": "cmdline_testsub01",
+                "CMDLINE_TESTSUB02": "cmdline_testsub02"
+            },
         },
         {
             "name": "test-gmm-dotnetlib - launch",
@@ -32,7 +38,6 @@
                 "CMDLINE_TESTSUB01": "cmdline_testsub01",
                 "CMDLINE_TESTSUB02": "cmdline_testsub02"
             },
-
         },
         {
             // Use IntelliSense to find out which attributes exist for C# debugging

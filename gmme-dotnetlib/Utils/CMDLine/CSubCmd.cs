@@ -545,6 +545,7 @@ using System.Text;
 		//------------------------------------------------------------------------
 		//------------------------------------------------------------------------
 		//------------------------------------------------------------------------
+
 /*		
 		private COptItem? xFindOptHelper(string? a_optName, bool a_ignoreCase)
 		{
@@ -590,6 +591,177 @@ using System.Text;
 				return null;
 
 			return item.Val;
+		}
+*/
+/*
+		//------------------------------------------------------------------------
+		//------------------------------------------------------------------------
+		//------------------------------------------------------------------------
+		//------------------------------------------------------------------------
+		public class SubCmd
+		{
+			private class CSubCmdOptItem
+			{
+				private string opt;
+				private string val;
+
+				public CSubCmdOptItem()
+				{
+					opt = "";
+					val = "";
+				}
+				public CSubCmdOptItem(CSubCmdOptItem a_src)
+				{
+					opt = a_src.opt;
+					val = a_src.val;
+				}
+				public string Opt
+				{
+					get		{ return opt; }
+					set		{ opt = value; }
+				}
+				public string Val
+				{
+					get		{ return val; }
+					set		{ val = value; }
+				}
+			};
+
+			private ArrayList m_list = null;
+			private char m_sep = (char)0x00;
+
+
+			//--------------------------------------------------------------------
+			//--------------------------------------------------------------------
+			public SubCmd()
+			{
+			}
+			public SubCmd(string a_cmds)
+			{
+				addCmds(a_cmds, ',');
+			}
+			public SubCmd(string a_cmds, char a_sep)
+			{
+				addCmds(a_cmds, a_sep);
+			}
+
+
+			//--------------------------------------------------------------------
+			//--------------------------------------------------------------------
+			public string GetOptValue(string a_optName)
+			{
+				return GetOptValue(a_optName, true);
+			}
+			public string GetOptValue(string a_optName, bool a_ignoreCase)
+			{
+				//-- look for the option
+				CSubCmdOptItem item = findOptHelper(a_optName, a_ignoreCase);
+				if (item == null)
+					return null;
+				if (item.Val.Length == 0)
+					return null;
+
+				return item.Val;
+			}
+
+			public bool HasCmds
+			{
+				get		{ return m_list.Count > 0; }
+			}
+
+			public bool IsOpt(string a_optName)
+			{
+				return IsOpt(a_optName, true);
+			}
+			public bool IsOpt(string a_optName, bool a_ignoreCase)
+			{
+				return findOptHelper(a_optName, a_ignoreCase) != null;
+			}
+
+			public char Sep
+			{
+				get		{ return m_sep; }
+			}
+
+			//--------------------------------------------------------------------
+			//--------------------------------------------------------------------
+			//--------------------------------------------------------------------
+			private void addCmds(string a_cmds, char a_sep)
+			{
+				int pos;
+
+
+				//----------------------------------------------------------------
+				//- save and initialize array
+				m_sep = a_sep;
+				if (m_list == null)
+					m_list = new ArrayList();
+
+
+				//----------------------------------------------------------------
+				//-- split the <a_cmds> up by <a_sep>, first seeing if it starts
+				//-- with single or double quotes
+				string cmds = a_cmds;
+
+				while (cmds.Length > 0 && (cmds[0] == '\"' || cmds[0] == '\''))
+					cmds = cmds.TrimStart(cmds[0]);
+				while (cmds.Length > 0 && (cmds.EndsWith("\"") || cmds.EndsWith("\'")))
+					cmds = cmds.TrimEnd(cmds[cmds.Length - 1]);
+
+
+				//----------------------------------------------------------------
+				//-- extract sub commands
+				string subCmd;
+				CSubCmdOptItem item = new CSubCmdOptItem();
+
+				while (cmds.Length > 0)
+				{
+					//-- find end of subcmd and remove
+					if ((pos = cmds.IndexOf(a_sep)) == -1)
+					{
+						subCmd = cmds;
+						cmds = "";
+					}
+					else
+					{
+						subCmd = cmds.Substring(0, pos);
+						cmds = cmds.Substring(pos + 1);
+					}
+
+
+					//-- see if subcmd has = sign
+					if ((pos = subCmd.IndexOf('=')) == -1)
+					{
+						item.Opt = subCmd;
+						item.Val = "";
+					}
+					else
+					{
+						item.Opt = subCmd.Substring(0, pos);
+						item.Val = subCmd.Substring(pos + 1);
+					}
+
+
+					//-- insert the item
+					m_list.Add(new CSubCmdOptItem(item));
+				}
+			}
+
+			private CSubCmdOptItem findOptHelper(string a_optName, bool a_ignoreCase)
+			{
+				//-- make sure list is not empty
+				if (m_list.Count == 0)
+					return null;
+
+				//-- determine compare function and search for option
+				foreach (CSubCmdOptItem item in m_list)
+				{
+					if (string.Compare(a_optName, item.Opt, a_ignoreCase) == 0)
+						return item;
+				}
+
+				return null;
+			}
 		}
 */
 	}

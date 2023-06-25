@@ -23,7 +23,7 @@ public partial class CMDLine
     //--------------------------------------------------------------------------
     //-- AddArgsArray
     //--------------------------------------------------------------------------
-    public void AddArgsArray(string[] a_args)
+    public void AddArgsArray(string[] a_args, string? a_file = null)
     {
         int argsLen = a_args.GetLength(0);
 
@@ -63,7 +63,7 @@ public partial class CMDLine
 
 
                 //-- add item to list
-                addItemToList_(l_opt, l_val);
+                addItemToList_(l_opt, l_val, a_file);
             }
             else if (arg[0] == '@')
                 AddArgsFile(subEnv_(arg.Substring(1)));
