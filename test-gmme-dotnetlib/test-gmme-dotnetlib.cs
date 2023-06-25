@@ -1,8 +1,8 @@
 ﻿//---------------------------------------------------------
 //---------------------------------------------------------
 #define TestCMDLine
-#define TestCMDLine_AddArgsArray
-#define xTestCMDLine_AddArgsLine
+#define xTestCMDLine_AddArgsArray
+#define TestCMDLine_AddArgsLine
 
 
 #define xTestCMDLineString
@@ -43,23 +43,6 @@ class TestGMMELib
 //#if TestCMDLineArgs
 
 #endif
-/*
-#if TestCMDLineString
-			StringBuilder l_sb = new StringBuilder();
-			l_sb.Append("-testftp1 host1,user1,password1 ").
-				 Append("-testftp2 host2,user2,password2,type2 ").
-				 Append("-TestFtp3 host3,user3,password3,type3 ");
-			l_sb.Append("-testoptvalue1 TestOptValue1 ").
-				 Append("-TestOptValue2 TestOptValue2 ").
-				 Append("-TestOptValue3 TestOptValue3 ");
-			l_sb.Append("-testisopt1 ").
-				 Append("-TestIsOpt2 ");
-
-			TestCmdLine.TestString(l_sb.ToString());
-#endif
-*/
-
-
 	}
 }
 
@@ -71,7 +54,7 @@ class TestCMDLine
 	{
 		string[] l_args = 
 		{
-			"@./opt/custperf.opt",
+			"@./opt/test01.opt",
 			"-test1", "test1val",
 			"-test3opt",
 			"-test2", "test2val"
@@ -88,10 +71,12 @@ class TestCMDLine
 		//-- build test string to use for testing
 		StringBuilder l_sb = new StringBuilder();
 
+		l_sb.Append("@./opt/test01.opt ");
 		l_sb.Append("-test${username}ftp1 host1,user1,password1 ").
 				Append("-testftp2 host2,user2,password2,type2 ").
 				Append("-TestFtp3 host3,user3,password3,type3 ").
 				Append("-testftp2 host2a,user2a,password2a,type2a ");
+/*
 		l_sb.Append("-testoptvalue1 TestOptValue1 ").
 				Append("-TestOptValue2 TestOptValue2 ").
 				Append("-TestOptValue3 TestOptValue3 ");
@@ -100,8 +85,7 @@ class TestCMDLine
 		l_sb.Append("-testsub01 '${CMDLINE_TESTSUB01}' ").
 				Append("-testsub02 '${CMDLINE_TESTSUB02}' ");
 		l_sb.Append("-testflag1 -testflag2 ");
-//		l_sb.Append("-testsub01 '${CMDLINE_TESTSUB01}' ");
-
+*/
 		//-- test 
 		GMMELib.Utils.CMDLine l_cmdline = new GMMELib.Utils.CMDLine();
 		l_cmdline.AddArgsLine(l_sb.ToString());
