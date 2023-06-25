@@ -28,6 +28,7 @@
             "stopAtEntry": false,
             "env":
             {
+                "CMDLINE_TESTSUBENV": "custperf.opt-sub",
                 "CMDLINE_TESTSUB01": "cmdline_testsub01",
                 "CMDLINE_TESTSUB02": "cmdline_testsub02"
             },

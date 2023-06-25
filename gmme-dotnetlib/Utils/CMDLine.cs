@@ -30,22 +30,8 @@ using System.Text;
 
 
 		//------------------------------------------------------------------------
-		//-- initialize the internal optitem list
-		private void initOptItemList_()
-		{
-			if (m_list != null)
-				return;
-
-			m_list = new SortedList<string, COptItem>();
-		}
-
-
 		//------------------------------------------------------------------------
 		//------------------------------------------------------------------------
-		//------------------------------------------------------------------------
-		/// <summary>
-		///	ctor
-		/// </summary>
 		public CMDLine()
 		{
 			Console.WriteLine("We are in CMDLine()!");
@@ -82,10 +68,19 @@ using System.Text;
 		}
 
 
-		//----------------------------------------------------------------------
+		//------------------------------------------------------------------------
+		//-- initialize the internal optitem list
+		private void initOptItemList_()
+		{
+			if (m_list != null)
+				return;
+
+			m_list = new SortedList<string, COptItem>();
+		}
+
+
 		//----------------------------------------------------------------------
 		//-- Dump
-		//----------------------------------------------------------------------
 		//----------------------------------------------------------------------
 		public void Dump()
 		{
@@ -132,57 +127,6 @@ using System.Text;
             print('   ' + l_opt + ' == [' + l_val + ']')
         print("CmdLine: Dump - end")
 */
-		}
-
-
-		//----------------------------------------------------------------------
-		//-- AddArgsArray
-		//----------------------------------------------------------------------
-		public void AddArgsArray(string[] a_args)
-		{
-			int argsLen = a_args.GetLength(0);
-
-			string arg;
-
-
-			//-- initialize array
-			initOptItemList_();
-
-			string? l_opt;
-			string? l_val;
-
-			//-- loop thru all arguments and add in opt,val pears
-			for (int i = 0; i < argsLen; i++)
-			{
-				//-- see if we have an arg
-				arg = a_args[i];
-				if (arg[0] == '-' || arg[0] == '/')
-				{
-					l_opt = arg;
-					l_val = null;
-					if ((i + 1) < argsLen)
-					{
-						if (a_args[i + 1][0] != '-' 
-							&& a_args[i + 1][0] != '/'
-							&& a_args[i + 1][0] != '@')
-						{
-							//-- we have a value with the option
-							l_val = a_args[i + 1];
-							i++;
-						}
-					}
-
-
-					//-- add item to list
-					addItemToList_(l_opt, l_val);
-				}
-/*
-				else if (arg[0] == '@')
-					AddArgsFile(subEnv(arg.Substring(1)));
-*/
-			}
-
-			m_init = true;
 		}
 
 /*
@@ -232,117 +176,7 @@ using System.Text;
 			}
 		}
 */
-		//----------------------------------------------------------------------------------
-		//-- AddArgsLine
-		//----------------------------------------------------------------------------------
-		public void AddArgsLine(string a_line)
-		{
-			AddArgsLine(a_line, null);
-		}
-		public void AddArgsLine(StringBuilder a_line)
-		{
-			AddArgsLine(a_line.ToString());
-		}
-		public void AddArgsLine(string a_line, string? a_file)
-		{
-			char endChr;
 
-			string tmp;
-
-			int i;
-
-
-			//-- initialize array and item
-			initOptItemList_();
-
-			string? l_opt = null;
-			string? l_val = null;
-
-
-			//-- process the line
-			tmp = a_line;
-			while (tmp.Length > 0)
-			{
-				tmp = tmp.TrimStart(null);
-				if (tmp.Length == 0)
-					break;
-				if (tmp[0] == '-' || tmp[0] == '/')
-				{
-					//-- find end of string
-					l_val = "";
-					if ((i = tmp.IndexOf(" ")) == -1)
-					{
-						l_opt = tmp;
-						tmp = "";
-					}
-					else
-					{
-						//-- pull option
-						l_opt = tmp.Substring(0, i);
-						tmp = tmp.Remove(0, i);
-						tmp = tmp.TrimStart(null);
-						if (tmp.Length > 0)
-						{
-							if (tmp[0] != '-' && tmp[0] != '/' && tmp[0] != '@')
-							{
-								//-- see if double or single quotes are being used
-								if (tmp[0] == '"' || tmp[0] == '\'')
-								{
-									endChr = tmp[0];
-									tmp = tmp.Remove(0, 1);
-								}
-								else
-									endChr = ' ';
-
-
-								//-- find end of val
-								if ((i = tmp.IndexOf(endChr)) == -1)
-								{
-									//-- remaining part of string is value
-									l_val = tmp;
-									tmp = "";
-								}
-								else
-								{
-									//-- pull value and remove from tmp
-									l_val = tmp.Substring(0, i);
-									tmp = tmp.Remove(0, i);
-									if (endChr != ' ')
-										tmp = tmp.Remove(0, 1);
-									tmp = tmp.TrimStart(null);
-								}
-							}
-						}
-					}
-
-					//----------------------------------------------------------
-					//-- add item to list
-					addItemToList_(l_opt, l_val, a_file);
-				}
-/*
-				else if (tmp[0] == '@')
-				{
-					//-- pull filename
-					if ((i = tmp.IndexOf(' ')) == -1)
-					{
-						fname = tmp.Substring(1);
-						tmp = "";
-					}
-					else
-					{
-						fname = tmp.Substring(1, i - 1);
-						tmp = tmp.Remove(0, i);
-						tmp = tmp.TrimStart(null);
-					}
-
-					if (fname.Length != 0)
-						AddArgsFile(subEnv(fname));
-				}
-*/
-			}
-
-			m_init = true;
-		}
 		private void addItemToList_(string? a_opt, string? a_val)
 		{
 			addItemToList_(a_opt, a_val, null);

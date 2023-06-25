@@ -71,6 +71,7 @@ class TestCMDLine
 	{
 		string[] l_args = 
 		{
+			"@./opt/custperf.opt",
 			"-test1", "test1val",
 			"-test3opt",
 			"-test2", "test2val"
