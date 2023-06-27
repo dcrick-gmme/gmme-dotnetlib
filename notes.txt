@@ -10,3 +10,16 @@
         dotnet build F:\crick3\dev\dotnet\gmme-dotnetlib\test-gmme-dotnetlib\test-gmme-dotnetlib.csproj /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary
 
                 "${workspaceFolder}/test-gmme-dotnetlib/test-gmme-dotnetlib.csproj",
+
+
+
+===============================================================================================
+Work that needs to be done:
+ o  Add support for tags, core frame work is in place
+ o  Add support to handle file and fileOrig on dump
+
+
+===============================================================================================
+Unique features for c#:
+ o  Trackes both subenv opt uppercase and orignial value
+ o  Can search both above opt versions

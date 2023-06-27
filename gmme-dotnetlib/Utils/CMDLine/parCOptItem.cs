@@ -23,6 +23,7 @@ public partial class CMDLine
 	private class COptItem
 	{
 		private string? m_file;
+		private string? m_fileOrig;
 		private string? m_opt;
 		private string? m_optOrig;
 		private string? m_tags;
@@ -34,6 +35,7 @@ public partial class CMDLine
 		public COptItem()
 		{
 			m_file = null;
+			m_fileOrig = null;
 			m_opt = null;
 			m_optOrig = null;
 			m_tags = null;
@@ -44,6 +46,7 @@ public partial class CMDLine
 		public COptItem(COptItem a_src)
 		{
 			m_file = a_src.m_file;
+			m_fileOrig = a_src.m_fileOrig;
 			m_opt = a_src.m_opt;
 			m_optOrig = a_src.m_optOrig;
 			m_tags = a_src.m_tags;
@@ -51,12 +54,15 @@ public partial class CMDLine
 			m_valOrig = a_src.m_valOrig;
 //				m_subCmd = a_src.m_subCmd;
 		}
-		public COptItem(string? a_opt, string? a_optOrig, string? a_val, string? a_valOrig, string? a_file)
+		public COptItem(string? a_opt, string? a_optOrig, string? a_val, string? a_valOrig, string? a_file, string? a_fileOrig)
 		{
 			m_file = a_file;
+			m_fileOrig = a_fileOrig;
+
 			m_opt = a_opt;
 			m_optOrig = a_optOrig;
 //				m_tags = a_.m_tags;
+
 			m_val = a_val;
 			m_valOrig = a_valOrig;
 //				m_subCmd = a_src.m_subCmd;
@@ -66,6 +72,11 @@ public partial class CMDLine
 		{
 			get		{ return m_file; }
 			set		{ m_file = value; }
+		}
+		public string? FileOrig
+		{
+			get		{ return m_fileOrig; }
+			set		{ m_fileOrig = value; }
 		}
 		public string? Opt
 		{

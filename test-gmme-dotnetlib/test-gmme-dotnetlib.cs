@@ -84,8 +84,8 @@ class TestCMDLine
 		//-- build test string to use for testing
 		StringBuilder l_sb = new StringBuilder();
 
-//		l_sb.Append("@./opt/test01.opt ");
-		l_sb.Append("-test${username}ftp1 host1,user1,password1 ").
+		l_sb.Append("@./opt/test01.opt ");
+		l_sb.Append("-test${username}ftp1 host1,user1,password1${username} ").
 				Append("-testftp2 host2,user2,password2,type2 ").
 				Append("-TestFtp3 host3,user3,password3,type3 ").
 				Append("-testftp2 host2a,user2a,password2a,type2a ");
@@ -101,7 +101,7 @@ class TestCMDLine
 */
 		//-- test 
 		GMMELib.Utils.CMDLine l_cmdline = new GMMELib.Utils.CMDLine();
-		l_cmdline.AddArgsLine(l_sb.ToString());
+		l_cmdline.AddArgsLine(l_sb.ToString(), "c:\\testfile${username}.opt");
 		l_cmdline.Dump();
 
 #if TestCMDLine_GetOptXXX

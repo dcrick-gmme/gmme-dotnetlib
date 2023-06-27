@@ -105,6 +105,7 @@ using System.Text;
 			{
 				foreach(var l_kvp in m_list)
 				{
+					//----------------------------------------------------------
 					//-- determine output
 					string l_opt = l_kvp.Key;
 					string? l_val = l_kvp.Value.Val;
@@ -113,11 +114,33 @@ using System.Text;
 					else if (l_val.Length == 0)
 						l_val = "<empty>";
 
+					//----------------------------------------------------------
 					//-- build output string
 					StringBuilder l_dbgOut = new StringBuilder("   ");
-					l_dbgOut.Append(l_opt).Append(" == [" + l_val + "]");
+					l_dbgOut.Append(l_opt).Append(" = [" + l_val + "]");
 					if (l_kvp.Value.File is not null)
-						l_dbgOut.Append(" :: [File = " + l_kvp.Value.File + "]");
+						l_dbgOut.Append(", file = " + l_kvp.Value.File);
+
+					//----------------------------------------------------------
+					//-- build output string for orig settings
+					StringBuilder l_dbgOutOrig = new StringBuilder();
+					if (l_kvp.Value.Opt != l_kvp.Value.OptOrig)
+						l_dbgOutOrig.Append("opt = " + l_kvp.Value.OptOrig);
+					if (l_kvp.Value.Val != l_kvp.Value.ValOrig)
+					{
+						if (l_dbgOutOrig.Length > 0)
+							l_dbgOutOrig.Append(", ");
+						l_dbgOutOrig.Append("val = " + l_kvp.Value.ValOrig);
+					}
+					if (l_kvp.Value.File != l_kvp.Value.FileOrig)
+					{
+						if (l_dbgOutOrig.Length > 0)
+							l_dbgOutOrig.Append(", ");
+						l_dbgOutOrig.Append("file = " + l_kvp.Value.FileOrig);
+					}
+					if (l_dbgOutOrig.Length > 0)
+						l_dbgOut.Append(" :::: Orig => [[" + l_dbgOutOrig + "]]");
+
 					System.Console.WriteLine(l_dbgOut);
 				}
 			}
@@ -151,11 +174,12 @@ using System.Text;
 			if (a_opt is null)
 				return;
 			string? l_opt = subEnv_(a_opt);
-			string ?l_val = subEnv_(a_val);
+			string? l_val = subEnv_(a_val);
+			string? l_file = subEnv_(a_file);
 
 			//------------------------------------------------------------------
 			//-- add item to m_list
-			COptItem l_item = new COptItem(l_opt, a_opt, l_val, a_val, a_file);
+			COptItem l_item = new COptItem(l_opt, a_opt, l_val, a_val, l_file, a_file);
 			if (l_opt is not null && l_opt.Length > 1)
 			{
 				if (m_list is not null)
