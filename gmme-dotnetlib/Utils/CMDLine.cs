@@ -25,6 +25,7 @@ using System.Text;
 	public partial class CMDLine
 	{
 		private SortedList<string, COptItem>? m_list = null;
+		private SortedList<string, COptItem>? m_list2 = null;
 
 		private bool m_init = false;
 
@@ -76,10 +77,11 @@ using System.Text;
 		//-- initialize the internal optitem list
 		private void initOptItemList_()
 		{
-			if (m_list != null)
-				return;
+			if (m_list == null)
+				m_list = new SortedList<string, COptItem>();
 
-			m_list = new SortedList<string, COptItem>();
+			if (m_list2 == null)
+				m_list2 = new SortedList<string, COptItem>();
 		}
 
 
@@ -135,6 +137,9 @@ using System.Text;
 */
 		}
 
+		//----------------------------------------------------------------------
+		//-- support functions to adding items, subenv and finding items
+		//----------------------------------------------------------------------
 		private void addItemToList_(string? a_opt, string? a_val)
 		{
 			addItemToList_(a_opt, a_val, null);
@@ -142,24 +147,22 @@ using System.Text;
 		private void addItemToList_(string? a_opt, string? a_val, string? a_file)
 		{
 			//------------------------------------------------------------------
-			//-- prepare a_opt
+			//-- prepare opt and val
 			if (a_opt is null)
 				return;
-			string? l_opt = null;
-			l_opt = a_opt.ToUpper();
-			l_opt = subEnv_(l_opt);
-			if (l_opt is not null)
-				l_opt = l_opt.ToUpper();
-
-			//------------------------------------------------------------------
-			//-- prepare a_val
+			string? l_opt = subEnv_(a_opt);
 			string ?l_val = subEnv_(a_val);
 
-
+			//------------------------------------------------------------------
 			//-- add item to m_list
 			COptItem l_item = new COptItem(l_opt, a_opt, l_val, a_val, a_file);
-			if (m_list is not null && l_opt is not null)
-				m_list[l_opt] = l_item;
+			if (l_opt is not null && l_opt.Length > 1)
+			{
+				if (m_list is not null)
+					m_list[l_opt.ToUpper()] = l_item;
+				if (m_list2 is not null)
+					m_list2[l_opt] = l_item;
+			}
 		}
 
 		private string? subEnv_(string? a_str)
@@ -171,13 +174,13 @@ using System.Text;
 			string? envStr;
 
 
-			//-----------------------------------------------------------------------
+			//------------------------------------------------------------------
 			//-- see if we have an environment
 			if (a_str == null || a_str.Length == 0)
 				return a_str;
 
 
-			//-----------------------------------------------------------------------
+			//------------------------------------------------------------------
 			//-- loop thru the string and see what we have.  Cmd line enviornment
 			//-- variables are substitured with "$(VAR)"
 			while ((p1 = a_str.IndexOf("${")) != -1)
@@ -195,14 +198,74 @@ using System.Text;
 
 			return a_str;
 		}
+		private COptItem? findOptHelper_(string a_opt, bool a_ucase = true)
+		{
+			//-- make sure list is not empty
+			SortedList<string, COptItem>? l_list = (a_ucase) ? m_list : m_list2;
+			if (l_list is not null)
+				if (l_list.Count == 0)
+					return null;
+
+			//-- determine compare function and search for option
+			COptItem? l_item = null;
+			string l_key = (a_ucase) ? a_opt.ToUpper() : a_opt;
+			if (l_list is not null)
+				if (l_list.ContainsKey(l_key))
+					l_item = l_list[l_key];
+
+			return l_item;
+		}
 
 
-
-		//----------------------------------------------------------------------------------
-		//----------------------------------------------------------------------------------
+		//----------------------------------------------------------------------
+		//----------------------------------------------------------------------
 		//-- access routines
-		//----------------------------------------------------------------------------------
-		//----------------------------------------------------------------------------------
+		//----------------------------------------------------------------------
+		private string? getOptValueHelper_(string a_opt, bool a_ucase)
+		{
+			if (!m_init)
+				return null;
+
+			//-- look for the option
+			COptItem? l_item = findOptHelper_(a_opt, a_ucase);
+			if (l_item is not null && l_item.Val is not null)
+			{
+				if (l_item.Val.Length == 0)
+					return null;
+				return l_item.Val;
+			}
+			return null;
+		}
+
+		//----------------------------------------------------------------------
+		//-- access routines - GetOptXXX
+		//----------------------------------------------------------------------
+		public string? GetOptValue(string a_opt, bool a_ucase = true)
+		{
+			return getOptValueHelper_(a_opt, a_ucase);
+		}
+
+/*
+		public string GetOptValueDef(string a_optName, string a_defValue)
+		{
+			return GetOptValueDef(a_optName, a_defValue, true);
+		}
+		public string GetOptValueDef(string a_optName, string a_defValue, bool a_ignoreCase)
+		{
+			if (!m_init)
+				return a_defValue;
+
+			string val = getOptValueHelper(a_optName, a_ignoreCase);
+			if (val == null || val.Length == 0)
+				return a_defValue;
+
+			return val;
+		}
+*/
+
+
+
+
 /*
 		public bool GetDBLogonOpt(string a_optName, out string a_retSrv, out string a_retUid,
 								  out string a_retPwd)
@@ -328,35 +391,8 @@ using System.Text;
 
 			return true;
 		}
-
-		public string GetOptValue(string a_optName)
-		{
-			return GetOptValue(a_optName, true);
-		}
-		public string GetOptValue(string a_optName, bool a_ignoreCase)
-		{
-			if (!m_init)
-				return null;
-
-			return getOptValueHelper(a_optName, a_ignoreCase);
-		}
-
-		public string GetOptValueDef(string a_optName, string a_defValue)
-		{
-			return GetOptValueDef(a_optName, a_defValue, true);
-		}
-		public string GetOptValueDef(string a_optName, string a_defValue, bool a_ignoreCase)
-		{
-			if (!m_init)
-				return a_defValue;
-
-			string val = getOptValueHelper(a_optName, a_ignoreCase);
-			if (val == null || val.Length == 0)
-				return a_defValue;
-
-			return val;
-		}
-
+*/
+/*
 		public string GetPathOpt(string a_optName)
 		{
 			return GetPathOpt(a_optName, null, null, true);
@@ -391,43 +427,6 @@ using System.Text;
 				str += '\\';
 
 			return str;
-		}
-*/
-/*
-		public SubCmd GetSubCmds(string a_optName)
-		{
-			return GetSubCmds(a_optName, ',', true);
-		}
-		public SubCmd GetSubCmds(string a_optName, char a_sep)
-		{
-			return GetSubCmds(a_optName, a_sep, true);
-		}
-		public SubCmd GetSubCmds(string a_optName, bool a_ignoreCase)
-		{
-			return GetSubCmds(a_optName, ',', a_ignoreCase);
-		}
-		public SubCmd GetSubCmds(string a_optName, char a_sep, bool a_ignoreCase)
-		{
-			//-----------------------------------------------------------------------
-			//-- make sure the option exists
-			COptItem item = findOptHelper(a_optName, a_ignoreCase);
-			if (item == null)
-				return null;
-
-
-			//-----------------------------------------------------------------------
-			//-- see if this option has been sent into sub commands
-			if (item.Val.Length == 0)
-				return null;
-			if (item.SubCmd != null)
-				return item.SubCmd;
-
-
-			//-----------------------------------------------------------------------
-			//-- see if we have sub commands
-			item.SubCmd = new SubCmd(item.Val, a_sep);
-
-			return item.SubCmd;
 		}
 */
 /*
@@ -467,7 +466,11 @@ using System.Text;
 
 			return true;
 		}
-
+*/
+/*
+		//----------------------------------------------------------------------
+		//-- access routines - getYesNo
+		//----------------------------------------------------------------------
 		public bool GetYesNoOpt(string a_optName, bool a_defValue)
 		{
 			return GetYesNoOpt(a_optName, a_defValue, true);
@@ -545,24 +548,6 @@ using System.Text;
 		//------------------------------------------------------------------------
 		//------------------------------------------------------------------------
 		//------------------------------------------------------------------------
-/*		
-		private COptItem? xFindOptHelper(string? a_optName, bool a_ignoreCase)
-		{
-			//-- make sure list is not empty
-			if (m_list?.Count == 0)
-				return null;
-
-			//-- determine compare function and search for option
-//			foreach (COptItem item in m_list)
-			foreach(var l_kvp in m_list)
-			{
-				if (string.Compare(a_optName, item.Opt, a_ignoreCase) == 0)
-					return item;
-			}
-
-			return null;
-		}
-*/
 
 /*
 		private bool getInfoOptPullData(ref string a_optStr, ref string a_retData)
@@ -577,19 +562,6 @@ using System.Text;
 			a_optStr = a_optStr.Substring(pos + 1);
 
 			return true;
-		}
-
-		private string getOptValueHelper(string a_optName, bool a_ignoreCase)
-		{
-			//-- look for the option
-			COptItem item = findOptHelper(a_optName, a_ignoreCase);
-			if (item == null)
-				return null;
-
-			if (item.Val.Length == 0)
-				return null;
-
-			return item.Val;
 		}
 */
 	}
