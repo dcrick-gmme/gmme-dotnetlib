@@ -1,9 +1,10 @@
 //@./Utils/CmdLineTest/ReportDist_Common.opt
--aaatestsubenv "${CMDLINE_TESTSUBENV}"
--mailonerr
+-aatestpath "c:\test2\test2a\testx"
+//-aaatestsubenv "${CMDLINE_TESTSUBENV}"
+//-mailonerr
 //-mailonerrregex "(60)"
--mailrctxt "this is a test"
--mailrcsmtp "mail78.apmoller.net"
--mailrcto "condcr@maersk.com"
--mailrcsubj "SCVUpdate Job Failed at: @@APP_FAILEDT@@"
--mailrcfrom "namismkt"
+//-mailrctxt "this is a test"
+//-mailrcsmtp "mail78.apmoller.net"
+//-mailrcto "condcr@maersk.com"
+//-mailrcsubj "SCVUpdate Job Failed at: @@APP_FAILEDT@@"
+//-mailrcfrom "namismkt"

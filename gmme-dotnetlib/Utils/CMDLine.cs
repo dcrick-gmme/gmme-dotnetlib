@@ -139,9 +139,9 @@ using System.Text;
 						l_dbgOutOrig.Append("file = " + l_kvp.Value.FileOrig);
 					}
 					if (l_dbgOutOrig.Length > 0)
-						l_dbgOut.Append(" :::: Orig => [[" + l_dbgOutOrig + "]]");
+						l_dbgOut.Append(" :::: Orig => [" + l_dbgOutOrig + "]");
 
-					System.Console.WriteLine(l_dbgOut);
+					System.Console.WriteLine(@l_dbgOut);
 				}
 			}
 			System.Console.WriteLine("CMDLine: Dump - beg:");
@@ -258,6 +258,7 @@ using System.Text;
 					return null;
 				return l_item.Val;
 			}
+
 			return null;
 		}
 
@@ -268,26 +269,102 @@ using System.Text;
 		{
 			return getOptValueHelper_(a_opt, a_ucase);
 		}
-
-/*
-		public string GetOptValueDef(string a_optName, string a_defValue)
+		public string? GetOptValue(string a_opt, string? a_default, bool a_ucase = true)
 		{
-			return GetOptValueDef(a_optName, a_defValue, true);
+			string? l_val = getOptValueHelper_(a_opt, a_ucase);
+			if (l_val == null || l_val.Length == 0)
+				return a_default;
+
+			return l_val;
 		}
-		public string GetOptValueDef(string a_optName, string a_defValue, bool a_ignoreCase)
+
+		//----------------------------------------------------------------------
+		//-- access routines - GetPathOptXXX
+		//----------------------------------------------------------------------
+		public string? GetPathOpt(string a_opt, bool a_ucase = true)
 		{
-			if (!m_init)
-				return a_defValue;
-
-			string val = getOptValueHelper(a_optName, a_ignoreCase);
-			if (val == null || val.Length == 0)
-				return a_defValue;
-
-			return val;
+			return getPathOptHelper_(a_opt, null, null, a_ucase);
 		}
-*/
+		public string? GetPathOpt(string a_opt, string? a_default, bool a_ucase = true)
+		{
+			return getPathOptHelper_(a_opt, a_default, null, a_ucase);
+		}
+		public string? GetPathOpt(string a_opt, string? a_default, string a_subst, bool a_ucase = true)
+		{
+			return getPathOptHelper_(a_opt, a_default, a_subst, a_ucase);
+		}
+		private string? getPathOptHelper_(string a_opt, string? a_default, string? a_subst, bool a_ucase)
+		{
+			//------------------------------------------------------------------
+			//-- get option with default value
+			string? l_str = GetOptValue(a_opt, a_default, a_ucase);
+			if (l_str == null || l_str.Length == 0)
+				return "";
+
+			//------------------------------------------------------------------
+			//-- see if substitution should be done, if '%' exists then replace
+			//-- all with value of <a_subValue>
+			if (a_subst is not null && a_subst.Length > 0)
+				l_str = l_str.Replace("%", a_subst);
+
+			//------------------------------------------------------------------
+			//-- make sure that path ends with a path separator char
+			if (!l_str.EndsWith(Path.DirectorySeparatorChar))
+				l_str += Path.DirectorySeparatorChar;
+
+			return l_str;
+		}
+
+		//----------------------------------------------------------------------
+		//-- access routines - GetBooleanOpt
+		//----------------------------------------------------------------------
+		public bool GetBooleanOpt(string a_opt, bool a_ucase = true)
+		{
+			return getBooleanOptHelper_(a_opt, false, true, false, a_ucase);
+		}
+		public bool GetBooleanOpt(string a_opt, bool a_default, bool a_ucase = true)
+		{
+			return getBooleanOptHelper_(a_opt, a_default, true, false, a_ucase);
+		}
+		public bool GetBooleanOpt(string a_opt, bool a_default, bool a_true, bool a_false, bool a_ucase = true)
+		{
+			return getBooleanOptHelper_(a_opt, a_default, a_true, a_false, a_ucase);
+		}
+		private bool getBooleanOptHelper_(string a_opt, bool a_default, bool a_true, bool a_false, bool a_ucase)
+		{
+			//------------------------------------------------------------------
+			//-- if opt does not exists, or does exists and is empty, then
+			//-- return default value
+			if (!IsOpt(a_opt))
+				return a_default;
+
+			string? l_opt = GetOptValue(a_opt, a_ucase);
+			if (l_opt == null || l_opt.Length == 0)
+				return a_default;
 
 
+			//------------------------------------------------------------------
+			//-- check if true or false
+			l_opt = l_opt.ToUpper();
+			if (l_opt == "1" || l_opt == "T" || l_opt == "TRUE" || l_opt == "ON" || l_opt == "Y" || l_opt == "YES")
+				return a_true;
+			if (l_opt == "0" || l_opt == "F" || l_opt == "FALSE" || l_opt == "OFF" || l_opt == "N" || l_opt == "NO")
+				return a_false;
+
+			return a_default;
+		}
+
+		//----------------------------------------------------------------------
+		//-- access routines - IsOpt
+		//----------------------------------------------------------------------
+		public bool IsOpt(string a_opt, bool a_ucase = true)
+		{
+			return IsOpt(a_opt, false, a_ucase);
+		}
+		public bool IsOpt(string a_opt, bool a_default, bool a_ucase = true)
+		{
+			return (findOptHelper_(a_opt, a_ucase) != null) ? true : a_default;
+		}
 
 
 /*
@@ -417,43 +494,6 @@ using System.Text;
 		}
 */
 /*
-		public string GetPathOpt(string a_optName)
-		{
-			return GetPathOpt(a_optName, null, null, true);
-		}
-		public string GetPathOpt(string a_optName, string a_defValue)
-		{
-			return GetPathOpt(a_optName, a_defValue, null, true);
-		}
-		public string GetPathOpt(string a_optName, string? a_defValue, string? a_subValue)
-		{
-			return GetPathOpt(a_optName, a_defValue, a_subValue, true);
-		}
-		public string GetPathOpt(string a_optName, string? a_defValue, string? a_subValue, bool a_ignoreCase)
-		{
-			//-------------------------------------------------------------------
-			//-- set default value and see if option exists
-			string str = GetOptValueDef(a_optName, a_defValue, a_ignoreCase);
-			if (str == null || str.Length == 0)
-				return "";
-
-
-			//-------------------------------------------------------------------
-			//-- see if substitution should be done, if '%' exists then replace
-			//-- all with value of <a_subValue>
-			if (a_subValue != null && a_subValue.Length > 0)
-				str = str.Replace("%", a_subValue);
-
-
-			//-------------------------------------------------------------------
-			//-- make sure that path ends with a '\'
-			if (!str.EndsWith("\\"))
-				str += '\\';
-
-			return str;
-		}
-*/
-/*
 		public bool GetWNetInfoOpt(string a_optName, out string a_retServer,
 			out string a_retUid, out string a_retPwd)
 		{
@@ -492,52 +532,6 @@ using System.Text;
 		}
 */
 /*
-		//----------------------------------------------------------------------
-		//-- access routines - getYesNo
-		//----------------------------------------------------------------------
-		public bool GetYesNoOpt(string a_optName, bool a_defValue)
-		{
-			return GetYesNoOpt(a_optName, a_defValue, true);
-		}
-		public bool GetYesNoOpt(string a_optName, bool a_defValue, bool a_ignoreCase)
-		{
-			//-----------------------------------------------------------------------
-			//-- if opt does not exists, or does exists and is empty, then return
-			//-- default value
-			//-----------------------------------------------------------------------
-			if (!IsOpt(a_optName))
-				return a_defValue;
-
-			string l_opt = GetOptValue(a_optName, a_ignoreCase);
-			if (l_opt == null || l_opt.Length == 0)
-				return a_defValue;
-
-
-			//-----------------------------------------------------------------------
-			//-- check if true or false
-			//-----------------------------------------------------------------------
-			l_opt = l_opt.ToUpper();
-			if (l_opt == "1" || l_opt == "T" || l_opt == "TRUE" || l_opt == "ON" || l_opt == "Y" || l_opt == "YES")
-				return true;
-			if (l_opt == "0" || l_opt == "F" || l_opt == "FALSE" || l_opt == "OFF" || l_opt == "N" || l_opt == "NO")
-				return false;
-
-			return a_defValue;
-		}
-
-		public bool IsOpt(string a_optName)
-		{
-			return IsOpt(a_optName, true);
-		}
-		public bool IsOpt(string a_optName, bool a_ignoreCase)
-		{
-			if (!m_init)
-				return false;
-
-			return findOptHelper(a_optName, a_ignoreCase) != null;
-		}
-
-
 		//----------------------------------------------------------------------------------
 		//----------------------------------------------------------------------------------
 		public void LogOptions()
