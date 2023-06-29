@@ -1,9 +1,13 @@
 # git ignore file
 .vscode/hold
+.vscode/launch.json
+.vscode/tasks.json
+
 backup/
 bin/
 obj/
 logs/
+
 gmme-dotnetlib.csproj.hold
 gmme-dotnetlib.csproj.hold2
 obj-hold/
