@@ -5,6 +5,9 @@
 #define xTestCMDLine_AddArgsLine
 #define TestCMDLine_AddArgsLineSB
 #define TestCMDLine_GetOptXXX
+#define TestCMDLine_GetBooleanOpt
+//#define TestCMDLine_GetOptValue
+//#define TestCMDLine_GetPathOpt
 
 
 #define xTestCMDLineString
@@ -113,6 +116,7 @@ class TestCMDLine
 		l_cmdline.Dump();
 
 #if TestCMDLine_GetOptXXX
+#if TestCMDLine_GetBooleanOpt
 		bool l_bool0 = l_cmdline.GetBooleanOpt("-bool0");
 		bool l_bool1 = l_cmdline.GetBooleanOpt("-bool1");
 		bool l_boolf = l_cmdline.GetBooleanOpt("-boolf");
@@ -127,20 +131,17 @@ class TestCMDLine
 		bool l_boolyes = l_cmdline.GetBooleanOpt("-boolyes");
 
 		bool l_bool0as1 = l_cmdline.GetBooleanOpt("-bool0", true, false, true);
-		
-//		.GetBooleanOpt("-bool1");
-		l_sb.Append("-bool1 1 -boolt t -booltrue true -boolon on -booly y -boolyes yes ");
-		l_sb.Append("-bool0 0 -boolf f -boolfalse false -booloff off -booln n -boolno no ");
-
-/*
-		string? l_path1 = l_cmdline.GetPathOpt("-testpath1");
-		string? l_path2a = l_cmdline.GetPathOpt("-testpath2");
-		string? l_path2b = l_cmdline.GetPathOpt("-testpath2", null, "crick");
-
+#endif	
+#if TestCMDLine_GetOptValue
 		string? l_opt1 = l_cmdline.GetOptValue("-testftp2");
 		string? l_opt2 = l_cmdline.GetOptValue("-testftp2x", "default value");
 		string? l_opt1a = l_cmdline.GetOptValue("-testftp2", false);
-*/
+#endif
+#if TestCMDLine_GetPathOpt
+		string? l_path1 = l_cmdline.GetPathOpt("-testpath1");
+		string? l_path2a = l_cmdline.GetPathOpt("-testpath2");
+		string? l_path2b = l_cmdline.GetPathOpt("-testpath2", null, "crick");
+#endif
 #endif
 	}
 #endif
