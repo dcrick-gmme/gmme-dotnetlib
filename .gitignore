@@ -1,7 +1,7 @@
 # git ignore file
 .vscode/hold
-.vscode/launch.json
-.vscode/tasks.json
+#.vscode/launch.json
+#.vscode/tasks.json
 
 backup/
 bin/
