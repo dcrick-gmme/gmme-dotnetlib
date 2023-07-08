@@ -34,10 +34,10 @@
             "stopAtEntry": true,
         },
         {
-            "name": "test-gmm-dotnetlib - launch",
+            "name": "test-gmm-dotnetlib - debug",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build-test-gmme-donetlib",
+            "preLaunchTask": "test-gmme-donetlib-debug",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/test-gmme-dotnetlib/bin/Debug/net7.0/test-gmme-dotnetlib.exe",
             "args": [],

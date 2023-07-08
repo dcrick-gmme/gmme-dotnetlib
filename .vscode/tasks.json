@@ -26,7 +26,7 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "build-test-gmme-donetlib",
+            "label": "test-gmme-donetlib-debug",
             "command": "dotnet",
             "type": "process",
             "args": [
