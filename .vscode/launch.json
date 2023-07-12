@@ -39,7 +39,9 @@
             "request": "launch",
             "preLaunchTask": "test-gmme-donetlib-debug",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/test-gmme-dotnetlib/bin/Debug/net7.0/test-gmme-dotnetlib.exe",
+            //${file}
+            "program": "${workspaceFolder}/test-gmme-dotnetlib/bin/Debug/net7.0/test-gmme-dotnetlib.dll",
+            //"program": "${file}",
             "args": [],
             "cwd": "${workspaceFolder}/test-gmme-dotnetlib",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
